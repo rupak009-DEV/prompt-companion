@@ -113,6 +113,13 @@ export default function AdminPage() {
   const [orLoading, setOrLoading] = useState(false);
   const [orImporting, setOrImporting] = useState<Set<string>>(new Set());
 
+  // AIML API browser
+  const [aimlBrowseOpen, setAimlBrowseOpen] = useState(false);
+  const [aimlModels, setAimlModels] = useState<OpenRouterModel[]>([]);
+  const [aimlSearch, setAimlSearch] = useState("");
+  const [aimlLoading, setAimlLoading] = useState(false);
+  const [aimlImporting, setAimlImporting] = useState<Set<string>>(new Set());
+
   // Ratings filter
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [ratingSearch, setRatingSearch] = useState("");
@@ -263,6 +270,52 @@ export default function AdminPage() {
     if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
     else { toast({ title: `Imported ${orModel.name}` }); fetchData(); }
     setOrImporting(prev => { const n = new Set(prev); n.delete(orModel.id); return n; });
+  };
+
+  // ── AIML API browser ────────────────────────────────────────────────────────
+  const aimlProvider = providers.find(p => p.provider_type === "aimlapi" && p.is_active);
+
+  const fetchAimlModels = async () => {
+    setAimlLoading(true);
+    try {
+      const res = await fetch("https://api.aimlapi.com/v1/models", {
+        headers: aimlProvider?.api_key_encrypted ? { Authorization: `Bearer ${aimlProvider.api_key_encrypted}` } : {},
+      });
+      const data = await res.json();
+      const modelList = (data.data || data || []).map((m: any) => ({
+        id: m.id || m.model_id || "",
+        name: m.name || m.id || m.model_id || "",
+        description: m.description || "",
+        pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
+        context_length: m.context_length || m.max_context_length || 0,
+      }));
+      setAimlModels(modelList);
+    } catch {
+      toast({ title: "Failed to fetch AIML API models", variant: "destructive" });
+    }
+    setAimlLoading(false);
+  };
+
+  const handleOpenAimlBrowse = () => { setAimlBrowseOpen(true); if (aimlModels.length === 0) fetchAimlModels(); };
+
+  const filteredAimlModels = useMemo(() => {
+    if (!aimlSearch.trim()) return aimlModels.slice(0, 100);
+    const q = aimlSearch.toLowerCase();
+    return aimlModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 100);
+  }, [aimlModels, aimlSearch]);
+
+  const importAimlModel = async (model: OpenRouterModel) => {
+    if (!aimlProvider) return;
+    setAimlImporting(prev => new Set(prev).add(model.id));
+    const isFree = model.pricing?.prompt === "0" && model.pricing?.completion === "0";
+    const { error } = await supabase.from("ai_models").insert({
+      display_name: model.name, model_id: model.id, provider_id: aimlProvider.id,
+      description: model.description?.slice(0, 200) || null,
+      is_active: true, is_free: isFree, context_window: model.context_length || null,
+    });
+    if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
+    else { toast({ title: `Imported ${model.name}` }); fetchData(); }
+    setAimlImporting(prev => { const n = new Set(prev); n.delete(model.id); return n; });
   };
 
   // ── Date-filtered Ratings ─────────────────────────────────────────────────────
@@ -630,6 +683,11 @@ export default function AdminPage() {
                   {openRouterProvider && (
                     <Button size="sm" variant="outline" onClick={handleOpenBrowse}>
                       <Search className="h-4 w-4 mr-1" /> Browse OpenRouter
+                    </Button>
+                  )}
+                  {aimlProvider && (
+                    <Button size="sm" variant="outline" onClick={handleOpenAimlBrowse}>
+                      <Search className="h-4 w-4 mr-1" /> Browse AIML API
                     </Button>
                   )}
                   <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
@@ -1111,6 +1169,59 @@ export default function AdminPage() {
                           {m.context_length > 0 && <p className="text-xs text-muted-foreground">{(m.context_length / 1000).toFixed(0)}K context</p>}
                         </div>
                         <Button size="sm" variant={alreadyAdded ? "secondary" : "default"} disabled={alreadyAdded || isImporting} onClick={() => importOrModel(m)} className="shrink-0">
+                          {isImporting ? <Loader2 className="h-3 w-3 animate-spin" /> : alreadyAdded ? <><Check className="h-3 w-3 mr-1" />Added</> : <><Download className="h-3 w-3 mr-1" />Add</>}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* ── AIML API Browser Dialog ────────────────────────────────────────────── */}
+        <Dialog open={aimlBrowseOpen} onOpenChange={setAimlBrowseOpen}>
+          <DialogContent className="max-w-2xl h-[80vh] flex flex-col overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Browse AIML API Models</DialogTitle>
+              <p className="text-sm text-muted-foreground">Browse and import available models from aimlapi.com</p>
+            </DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search models..." value={aimlSearch} onChange={(e) => setAimlSearch(e.target.value)} className="pl-9" />
+              </div>
+              <Button size="sm" variant="outline" onClick={fetchAimlModels} disabled={aimlLoading}>
+                <RefreshCw className={`h-4 w-4 ${aimlLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {aimlModels.length > 0 && `${aimlModels.length} models available`}
+              {aimlSearch && filteredAimlModels.length !== aimlModels.length && ` · ${filteredAimlModels.length} matching`}
+            </div>
+            {aimlLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <ScrollArea className="flex-1 max-h-[55vh]">
+                <div className="space-y-2 pr-4">
+                  {filteredAimlModels.length === 0 && <p className="text-center text-muted-foreground py-8">No models found</p>}
+                  {filteredAimlModels.map(m => {
+                    const alreadyAdded = existingModelIds.has(m.id);
+                    const isImporting = aimlImporting.has(m.id);
+                    const isFree = m.pricing?.prompt === "0" && m.pricing?.completion === "0";
+                    return (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">{m.name}</span>
+                            {isFree && <Badge variant="outline" className="text-xs shrink-0">Free</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{m.id}</p>
+                          {m.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{m.description}</p>}
+                          {m.context_length > 0 && <p className="text-[10px] text-muted-foreground">{(m.context_length / 1000).toFixed(0)}K context</p>}
+                        </div>
+                        <Button size="sm" variant={alreadyAdded ? "secondary" : "default"} disabled={alreadyAdded || isImporting} onClick={() => importAimlModel(m)} className="shrink-0">
                           {isImporting ? <Loader2 className="h-3 w-3 animate-spin" /> : alreadyAdded ? <><Check className="h-3 w-3 mr-1" />Added</> : <><Download className="h-3 w-3 mr-1" />Add</>}
                         </Button>
                       </div>

@@ -1179,6 +1179,59 @@ export default function AdminPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* ── AIML API Browser Dialog ────────────────────────────────────────────── */}
+        <Dialog open={aimlBrowseOpen} onOpenChange={setAimlBrowseOpen}>
+          <DialogContent className="max-w-2xl h-[80vh] flex flex-col overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Browse AIML API Models</DialogTitle>
+              <p className="text-sm text-muted-foreground">Browse and import available models from aimlapi.com</p>
+            </DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search models..." value={aimlSearch} onChange={(e) => setAimlSearch(e.target.value)} className="pl-9" />
+              </div>
+              <Button size="sm" variant="outline" onClick={fetchAimlModels} disabled={aimlLoading}>
+                <RefreshCw className={`h-4 w-4 ${aimlLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {aimlModels.length > 0 && `${aimlModels.length} models available`}
+              {aimlSearch && filteredAimlModels.length !== aimlModels.length && ` · ${filteredAimlModels.length} matching`}
+            </div>
+            {aimlLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <ScrollArea className="flex-1 max-h-[55vh]">
+                <div className="space-y-2 pr-4">
+                  {filteredAimlModels.length === 0 && <p className="text-center text-muted-foreground py-8">No models found</p>}
+                  {filteredAimlModels.map(m => {
+                    const alreadyAdded = existingModelIds.has(m.id);
+                    const isImporting = aimlImporting.has(m.id);
+                    const isFree = m.pricing?.prompt === "0" && m.pricing?.completion === "0";
+                    return (
+                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">{m.name}</span>
+                            {isFree && <Badge variant="outline" className="text-xs shrink-0">Free</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{m.id}</p>
+                          {m.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{m.description}</p>}
+                          {m.context_length > 0 && <p className="text-[10px] text-muted-foreground">{(m.context_length / 1000).toFixed(0)}K context</p>}
+                        </div>
+                        <Button size="sm" variant={alreadyAdded ? "secondary" : "default"} disabled={alreadyAdded || isImporting} onClick={() => importAimlModel(m)} className="shrink-0">
+                          {isImporting ? <Loader2 className="h-3 w-3 animate-spin" /> : alreadyAdded ? <><Check className="h-3 w-3 mr-1" />Added</> : <><Download className="h-3 w-3 mr-1" />Add</>}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

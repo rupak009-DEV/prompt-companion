@@ -272,6 +272,52 @@ export default function AdminPage() {
     setOrImporting(prev => { const n = new Set(prev); n.delete(orModel.id); return n; });
   };
 
+  // ── AIML API browser ────────────────────────────────────────────────────────
+  const aimlProvider = providers.find(p => p.provider_type === "aimlapi" && p.is_active);
+
+  const fetchAimlModels = async () => {
+    setAimlLoading(true);
+    try {
+      const res = await fetch("https://api.aimlapi.com/v1/models", {
+        headers: aimlProvider?.api_key_encrypted ? { Authorization: `Bearer ${aimlProvider.api_key_encrypted}` } : {},
+      });
+      const data = await res.json();
+      const modelList = (data.data || data || []).map((m: any) => ({
+        id: m.id || m.model_id || "",
+        name: m.name || m.id || m.model_id || "",
+        description: m.description || "",
+        pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
+        context_length: m.context_length || m.max_context_length || 0,
+      }));
+      setAimlModels(modelList);
+    } catch {
+      toast({ title: "Failed to fetch AIML API models", variant: "destructive" });
+    }
+    setAimlLoading(false);
+  };
+
+  const handleOpenAimlBrowse = () => { setAimlBrowseOpen(true); if (aimlModels.length === 0) fetchAimlModels(); };
+
+  const filteredAimlModels = useMemo(() => {
+    if (!aimlSearch.trim()) return aimlModels.slice(0, 100);
+    const q = aimlSearch.toLowerCase();
+    return aimlModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 100);
+  }, [aimlModels, aimlSearch]);
+
+  const importAimlModel = async (model: OpenRouterModel) => {
+    if (!aimlProvider) return;
+    setAimlImporting(prev => new Set(prev).add(model.id));
+    const isFree = model.pricing?.prompt === "0" && model.pricing?.completion === "0";
+    const { error } = await supabase.from("ai_models").insert({
+      display_name: model.name, model_id: model.id, provider_id: aimlProvider.id,
+      description: model.description?.slice(0, 200) || null,
+      is_active: true, is_free: isFree, context_window: model.context_length || null,
+    });
+    if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
+    else { toast({ title: `Imported ${model.name}` }); fetchData(); }
+    setAimlImporting(prev => { const n = new Set(prev); n.delete(model.id); return n; });
+  };
+
   // ── Date-filtered Ratings ─────────────────────────────────────────────────────
   const dateFilteredRatings = useMemo(() => {
     if (!dateFrom && !dateTo) return ratings;

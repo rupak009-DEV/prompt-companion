@@ -77,6 +77,35 @@ function EnhancedOutputComponent({
     return Math.min(10, Math.round(s));
   }, [enhancedPrompt, isStreaming]);
 
+  // Auto-submit system-generated rating when enhancement completes
+  const systemRatedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!enhancedPrompt || isStreaming || !score) return;
+    const promptKey = enhancedPrompt.slice(0, 100);
+    if (systemRatedRef.current === promptKey) return;
+    systemRatedRef.current = promptKey;
+
+    const starRating = Math.max(1, Math.min(5, Math.round(score / 2)));
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("prompt_ratings" as any).insert({
+          user_id: user?.id || null,
+          rating: starRating,
+          original_prompt: originalPrompt?.slice(0, 2000) || null,
+          enhanced_prompt: enhancedPrompt.slice(0, 5000),
+          target_model: targetModel,
+          mode,
+          action_type: "system",
+          ai_model_used: aiModelUsed || null,
+          generation_time_ms: generationTimeMs || null,
+        } as any);
+      } catch {
+        // silently fail
+      }
+    })();
+  }, [enhancedPrompt, isStreaming, score, originalPrompt, targetModel, mode, aiModelUsed, generationTimeMs]);
+
   const handleJsonTab = useCallback(async () => {
     setViewMode("json");
     if (structuredJson || jsonLoading) return;

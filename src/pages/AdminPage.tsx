@@ -18,7 +18,9 @@ import {
   Star, BarChart3, Users, CreditCard, HardDrive, Activity, Package,
   FileText, Lock, LayoutDashboard, TrendingUp, AlertTriangle, RefreshCw,
   Clock, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp, CalendarIcon, X,
+  MessageSquare, Bug,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

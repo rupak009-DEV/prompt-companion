@@ -979,6 +979,7 @@ export default function AdminPage() {
                           >
                             <StarRow rating={r.rating} />
                             <div className="flex items-center gap-1.5 shrink-0">
+                              {r.action_type === "system" && <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0 h-4">System</Badge>}
                               {r.mode && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 capitalize">{r.mode}</Badge>}
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{r.action_type}</Badge>
                             </div>

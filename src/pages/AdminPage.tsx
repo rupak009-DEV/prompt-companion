@@ -142,7 +142,7 @@ export default function AdminPage() {
 
   useEffect(() => { checkAdmin(); }, []);
   useEffect(() => {
-    if (isAdmin) { fetchData(); fetchRatings(); fetchUsers(); }
+    if (isAdmin) { fetchData(); fetchRatings(); fetchUsers(); fetchSystemPrompts(); fetchErrorLogs(); }
   }, [isAdmin]);
 
   const checkAdmin = async () => {

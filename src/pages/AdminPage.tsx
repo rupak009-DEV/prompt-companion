@@ -834,6 +834,66 @@ export default function AdminPage() {
               )}
             </TabsContent>
 
+            {/* ─── SYSTEM PROMPTS ─────────────────────────────────────────────────── */}
+            <TabsContent value="prompts" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">View and edit system prompts used by the AI enhancement engine</p>
+                <Button size="sm" variant="outline" onClick={fetchSystemPrompts} disabled={promptsLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-1 ${promptsLoading ? "animate-spin" : ""}`} /> Refresh
+                </Button>
+              </div>
+
+              {promptsLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(systemPrompts).map(([key, value]) => {
+                    const label = key.replace("system_prompt_", "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                    const isEditing = editingPrompt === key;
+                    return (
+                      <Card key={key}>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              {label}
+                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => setEditingPrompt(null)} className="h-7 text-xs">Cancel</Button>
+                                  <Button size="sm" onClick={() => saveSystemPrompt(key, systemPrompts[key])} disabled={promptsSaving} className="h-7 text-xs">
+                                    {promptsSaving && <Loader2 className="h-3 w-3 animate-spin mr-1" />} Save
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button size="sm" variant="outline" onClick={() => setEditingPrompt(key)} className="h-7 text-xs">Edit</Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {isEditing ? (
+                            <Textarea
+                              value={value}
+                              onChange={(e) => setSystemPrompts(prev => ({ ...prev, [key]: e.target.value }))}
+                              className="font-mono text-xs min-h-[200px]"
+                              rows={10}
+                            />
+                          ) : (
+                            <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-md p-3 max-h-[200px] overflow-auto">{value}</pre>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  {Object.keys(systemPrompts).length === 0 && (
+                    <Card><CardContent className="py-8 text-center text-muted-foreground">No system prompts configured</CardContent></Card>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
             {/* ─── RATINGS ────────────────────────────────────────────────────────── */}
             <TabsContent value="ratings" className="space-y-4 mt-4">
               <div className="flex flex-wrap items-center gap-2 justify-between">

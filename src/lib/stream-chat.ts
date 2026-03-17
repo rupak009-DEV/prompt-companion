@@ -1,6 +1,45 @@
 import { WizardData, PromptParameters } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+// ── Error logging helper ────────────────────────────────────────────────────
+async function logEnhancementError(opts: {
+  errorType: string;
+  errorMessage: string;
+  errorCode?: number;
+  mode?: string;
+  modelUsed?: string;
+  provider?: string;
+  context?: Record<string, unknown>;
+}) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("error_logs" as any).insert({
+      user_id: user?.id || null,
+      error_type: opts.errorType,
+      error_message: opts.errorMessage,
+      error_code: opts.errorCode || null,
+      mode: opts.mode || null,
+      model_used: opts.modelUsed || null,
+      provider: opts.provider || null,
+      request_context: opts.context || null,
+    });
+  } catch {
+    // silently fail — don't block the user flow
+  }
+}
+
+function categorizeError(status: number, message: string): string {
+  if (status === 429) return "rate_limit";
+  if (status === 402) return "usage_limit";
+  if (status === 401 || status === 403) return "auth_error";
+  if (status === 500) return "server_error";
+  if (status === 502 || status === 503 || status === 504) return "upstream_error";
+  if (message.toLowerCase().includes("api key")) return "api_key_error";
+  if (message.toLowerCase().includes("timeout")) return "timeout";
+  return "unknown_error";
+}
 
 export async function convertToStructuredJson(enhancedPrompt: string): Promise<Record<string, unknown>> {
   const resp = await fetch(CHAT_URL, {
@@ -13,7 +52,14 @@ export async function convertToStructuredJson(enhancedPrompt: string): Promise<R
   });
 
   if (!resp.ok) {
-    throw new Error(`Conversion failed: ${resp.statusText}`);
+    const errorMsg = `Conversion failed: ${resp.statusText}`;
+    await logEnhancementError({
+      errorType: categorizeError(resp.status, errorMsg),
+      errorMessage: errorMsg,
+      errorCode: resp.status,
+      mode: "convert_to_json",
+    });
+    throw new Error(errorMsg);
   }
 
   return resp.json();
@@ -40,7 +86,16 @@ export async function fetchAssistedQuestions(
     body: JSON.stringify({ originalPrompt, mode, answers }),
   });
 
-  if (!resp.ok) throw new Error(`Failed to get questions: ${resp.statusText}`);
+  if (!resp.ok) {
+    const errorMsg = `Failed to get questions: ${resp.statusText}`;
+    await logEnhancementError({
+      errorType: categorizeError(resp.status, errorMsg),
+      errorMessage: errorMsg,
+      errorCode: resp.status,
+      mode,
+    });
+    throw new Error(errorMsg);
+  }
   const data = await resp.json();
   return data.questions || [];
 }
@@ -84,11 +139,19 @@ export async function streamAssistedGenerate({
       signal,
     });
 
-    if (resp.status === 429) { onError("Rate limit exceeded. Please wait."); return; }
-    if (resp.status === 402) { onError("Usage limit reached."); return; }
+    if (resp.status === 429) {
+      await logEnhancementError({ errorType: "rate_limit", errorMessage: "Rate limit exceeded", errorCode: 429, mode: "assisted_generate", context: { targetModel } });
+      onError("Rate limit exceeded. Please wait."); return;
+    }
+    if (resp.status === 402) {
+      await logEnhancementError({ errorType: "usage_limit", errorMessage: "Usage limit reached", errorCode: 402, mode: "assisted_generate", context: { targetModel } });
+      onError("Usage limit reached."); return;
+    }
     if (!resp.ok || !resp.body) {
       const text = await resp.text();
-      onError(`Error: ${text || resp.statusText}`);
+      const errorMsg = text || resp.statusText;
+      await logEnhancementError({ errorType: categorizeError(resp.status, errorMsg), errorMessage: errorMsg, errorCode: resp.status, mode: "assisted_generate", context: { targetModel } });
+      onError(`Error: ${errorMsg}`);
       return;
     }
 
@@ -141,7 +204,9 @@ export async function streamAssistedGenerate({
     onDone();
   } catch (e: unknown) {
     if (e instanceof DOMException && e.name === "AbortError") { onDone(); return; }
-    onError(e instanceof Error ? e.message : "Unknown error");
+    const errorMsg = e instanceof Error ? e.message : "Unknown error";
+    await logEnhancementError({ errorType: "client_error", errorMessage: errorMsg, mode: "assisted_generate", context: { targetModel } });
+    onError(errorMsg);
   }
 }
 
@@ -175,11 +240,19 @@ export async function streamEnhance({
       signal,
     });
 
-    if (resp.status === 429) { onError("Rate limit exceeded. Please wait and try again."); return; }
-    if (resp.status === 402) { onError("Usage limit reached. Please add credits."); return; }
+    if (resp.status === 429) {
+      await logEnhancementError({ errorType: "rate_limit", errorMessage: "Rate limit exceeded", errorCode: 429, mode: wizardData ? "wizard" : "quick", modelUsed: targetModel });
+      onError("Rate limit exceeded. Please wait and try again."); return;
+    }
+    if (resp.status === 402) {
+      await logEnhancementError({ errorType: "usage_limit", errorMessage: "Usage limit reached", errorCode: 402, mode: wizardData ? "wizard" : "quick", modelUsed: targetModel });
+      onError("Usage limit reached. Please add credits."); return;
+    }
     if (!resp.ok || !resp.body) {
       const text = await resp.text();
-      onError(`Error: ${text || resp.statusText}`);
+      const errorMsg = text || resp.statusText;
+      await logEnhancementError({ errorType: categorizeError(resp.status, errorMsg), errorMessage: errorMsg, errorCode: resp.status, mode: wizardData ? "wizard" : "quick", modelUsed: targetModel });
+      onError(`Error: ${errorMsg}`);
       return;
     }
 
@@ -232,6 +305,8 @@ export async function streamEnhance({
     onDone();
   } catch (e: unknown) {
     if (e instanceof DOMException && e.name === "AbortError") { onDone(); return; }
-    onError(e instanceof Error ? e.message : "Unknown error");
+    const errorMsg = e instanceof Error ? e.message : "Unknown error";
+    await logEnhancementError({ errorType: "client_error", errorMessage: errorMsg, mode: wizardData ? "wizard" : "quick", modelUsed: targetModel });
+    onError(errorMsg);
   }
 }

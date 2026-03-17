@@ -685,6 +685,11 @@ export default function AdminPage() {
                       <Search className="h-4 w-4 mr-1" /> Browse OpenRouter
                     </Button>
                   )}
+                  {aimlProvider && (
+                    <Button size="sm" variant="outline" onClick={handleOpenAimlBrowse}>
+                      <Search className="h-4 w-4 mr-1" /> Browse AIML API
+                    </Button>
+                  )}
                   <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" disabled={providers.length === 0}><Plus className="h-4 w-4 mr-1" /> Add Model</Button>

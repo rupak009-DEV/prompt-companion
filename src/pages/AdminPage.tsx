@@ -439,6 +439,8 @@ export default function AdminPage() {
       if (ratingFilter === "positive") list = list.filter(r => r.rating >= 4);
       else if (ratingFilter === "negative") list = list.filter(r => r.rating <= 2);
       else if (ratingFilter === "neutral") list = list.filter(r => r.rating === 3);
+      else if (ratingFilter === "system") list = list.filter(r => r.action_type === "system");
+      else if (ratingFilter === "user") list = list.filter(r => r.action_type !== "system");
       else list = list.filter(r => r.mode === ratingFilter);
     }
     if (ratingSearch.trim()) {

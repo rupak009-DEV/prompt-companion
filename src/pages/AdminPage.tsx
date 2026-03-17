@@ -901,8 +901,10 @@ export default function AdminPage() {
                   <Input placeholder="Search prompts, models..." value={ratingSearch} onChange={e => setRatingSearch(e.target.value)} className="h-8 w-56 text-xs" />
                   <Select value={ratingFilter} onValueChange={setRatingFilter}>
                     <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                     <SelectContent>
                       <SelectItem value="all">All Ratings</SelectItem>
+                      <SelectItem value="system">System Generated</SelectItem>
+                      <SelectItem value="user">User Rated</SelectItem>
                       <SelectItem value="positive">Positive (4-5★)</SelectItem>
                       <SelectItem value="neutral">Neutral (3★)</SelectItem>
                       <SelectItem value="negative">Negative (1-2★)</SelectItem>

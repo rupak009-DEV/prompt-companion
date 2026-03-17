@@ -1020,6 +1020,68 @@ export default function AdminPage() {
               )}
             </TabsContent>
 
+            {/* ─── ERROR LOGS ─────────────────────────────────────────────────────── */}
+            <TabsContent value="errors" className="space-y-4 mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Select value={errorTypeFilter} onValueChange={setErrorTypeFilter}>
+                    <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Errors</SelectItem>
+                      <SelectItem value="rate_limit">Rate Limit</SelectItem>
+                      <SelectItem value="usage_limit">Usage Limit</SelectItem>
+                      <SelectItem value="auth_error">Auth Error</SelectItem>
+                      <SelectItem value="api_key_error">API Key Error</SelectItem>
+                      <SelectItem value="server_error">Server Error</SelectItem>
+                      <SelectItem value="upstream_error">Upstream Error</SelectItem>
+                      <SelectItem value="timeout">Timeout</SelectItem>
+                      <SelectItem value="client_error">Client Error</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button size="sm" variant="outline" onClick={fetchErrorLogs} disabled={errorLogsLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-1 ${errorLogsLoading ? "animate-spin" : ""}`} /> Refresh
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <StatCard icon={Bug} label="Total Errors" value={errorLogs.length} />
+                <StatCard icon={Clock} label="Rate Limits" value={errorStats["rate_limit"] || 0} />
+                <StatCard icon={CreditCard} label="Usage Limits" value={errorStats["usage_limit"] || 0} />
+                <StatCard icon={AlertTriangle} label="Server Errors" value={(errorStats["server_error"] || 0) + (errorStats["upstream_error"] || 0)} />
+              </div>
+
+              {errorLogsLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : filteredErrorLogs.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">No error logs found</CardContent></Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[500px]">
+                      <div className="divide-y">
+                        {filteredErrorLogs.map(log => (
+                          <div key={log.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={log.error_type === "rate_limit" ? "secondary" : log.error_type === "usage_limit" ? "outline" : "destructive"} className="text-[10px] px-1.5 py-0 h-4">
+                                {log.error_type.replace(/_/g, " ")}
+                              </Badge>
+                              {log.error_code && <span className="text-[10px] text-muted-foreground font-mono">{log.error_code}</span>}
+                              {log.mode && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{log.mode}</Badge>}
+                              {log.model_used && <span className="text-[10px] text-muted-foreground">{log.model_used}</span>}
+                              <span className="text-[10px] text-muted-foreground ml-auto">{new Date(log.created_at).toLocaleString()}</span>
+                            </div>
+                            <p className="text-xs text-foreground/80 truncate">{log.error_message}</p>
+                            {log.user_id && <p className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">User: {log.user_id.slice(0, 8)}...</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             {/* ─── STORAGE ────────────────────────────────────────────────────────── */}
             <TabsContent value="storage" className="space-y-4 mt-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

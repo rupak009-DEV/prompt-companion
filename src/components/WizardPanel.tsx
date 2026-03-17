@@ -10,7 +10,7 @@ interface Props {
 }
 
 const TONE_OPTIONS = ["Professional", "Casual", "Academic", "Creative", "Technical", "Friendly", "Authoritative", "Humorous"];
-const FORMAT_OPTIONS = ["Paragraph", "Bullet points", "Step-by-step", "Code", "Table", "JSON", "Markdown", "Conversation"];
+const FORMAT_OPTIONS = ["Paragraph", "Bullet points", "Step-by-step", "Code", "Table", "Conversation"];
 
 function WizardPanelComponent({ data, onChange }: Props) {
   const update = (field: keyof WizardData, value: string) => {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, memo } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

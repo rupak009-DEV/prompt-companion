@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { saveRecord } from "@/lib/storage";
 import { EnhancementRecord } from "@/lib/types";
 import { convertToStructuredJson } from "@/lib/stream-chat";
+import { supabase } from "@/integrations/supabase/client";
 import { FeedbackPopover } from "@/components/FeedbackPopover";
 import { RatingDialog } from "@/components/RatingDialog";
 

@@ -122,6 +122,18 @@ export default function AdminPage() {
   const [aimlLoading, setAimlLoading] = useState(false);
   const [aimlImporting, setAimlImporting] = useState<Set<string>>(new Set());
 
+  // System prompts
+  const [systemPrompts, setSystemPrompts] = useState<Record<string, string>>({});
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [promptsSaving, setPromptsSaving] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
+
+  // Error logs
+  type ErrorLog = { id: string; user_id: string | null; error_type: string; error_message: string; error_code: number | null; mode: string | null; model_used: string | null; provider: string | null; created_at: string };
+  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
+  const [errorLogsLoading, setErrorLogsLoading] = useState(false);
+  const [errorTypeFilter, setErrorTypeFilter] = useState<string>("all");
+
   // Ratings filter
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [ratingSearch, setRatingSearch] = useState("");

@@ -179,6 +179,55 @@ export default function AdminPage() {
     setUsersLoading(false);
   };
 
+  const fetchSystemPrompts = async () => {
+    setPromptsLoading(true);
+    const { data } = await supabase.from("app_settings").select("*").like("key", "system_prompt_%");
+    const prompts: Record<string, string> = {};
+    // Default prompts from the edge function
+    const defaults: Record<string, string> = {
+      system_prompt_enhance: `You are an expert prompt engineer. Your job is to take a user's simple, lazy, or vague prompt and transform it into a highly effective, detailed prompt optimized for the specified target AI model.\n\nRules:\n1. ONLY output the enhanced prompt text — no explanations, no commentary.\n2. Tailor the prompt to the target model's strengths.\n3. Add specificity: context, role, constraints, output format, examples.\n4. Preserve the user's core intent — enhance, don't change the meaning.`,
+      system_prompt_json_convert: `You are a universal prompt normalizer. Convert enhanced text prompts into structured JSON objects by intelligently extracting keys and values.\n\nRules:\n1. ONLY output valid JSON — no explanations, no markdown fences.\n2. Keys must be snake_case. Support strings, arrays, numbers, booleans, and nested objects.\n3. Do NOT hallucinate requirements not present in the prompt.`,
+      system_prompt_assisted_questions: `You are an expert prompt engineer conducting a structured interview. Based on the user's description, generate 4-6 clarifying questions.\n\nRules:\n1. Output ONLY a valid JSON array. No explanations.\n2. Each object: "id", "question", "type" ("select"), "options" (3-5 choices).\n3. Cover: intent, audience, tone, format, constraints, context.`,
+      system_prompt_assisted_generate: `You are an expert prompt engineer. Based on the user's description and their detailed answers, generate the perfect prompt optimized for the target AI model.\n\nRules:\n1. ONLY output the enhanced prompt text.\n2. Incorporate ALL information from the user's answers naturally.`,
+    };
+    // Merge defaults with DB overrides
+    Object.entries(defaults).forEach(([key, val]) => { prompts[key] = val; });
+    if (data) data.forEach((row: any) => { prompts[row.key] = typeof row.value === "string" ? row.value : JSON.stringify(row.value); });
+    setSystemPrompts(prompts);
+    setPromptsLoading(false);
+  };
+
+  const saveSystemPrompt = async (key: string, value: string) => {
+    setPromptsSaving(true);
+    const { data: existing } = await supabase.from("app_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("app_settings").update({ value: value as any }).eq("key", key);
+    } else {
+      await supabase.from("app_settings").insert({ key, value: value as any, description: `System prompt: ${key}` });
+    }
+    toast({ title: "System prompt saved" });
+    setEditingPrompt(null);
+    setPromptsSaving(false);
+  };
+
+  const fetchErrorLogs = async () => {
+    setErrorLogsLoading(true);
+    const { data } = await supabase.from("error_logs" as any).select("*").order("created_at", { ascending: false }).limit(200);
+    if (data) setErrorLogs(data as any as ErrorLog[]);
+    setErrorLogsLoading(false);
+  };
+
+  const filteredErrorLogs = useMemo(() => {
+    if (errorTypeFilter === "all") return errorLogs;
+    return errorLogs.filter(l => l.error_type === errorTypeFilter);
+  }, [errorLogs, errorTypeFilter]);
+
+  const errorStats = useMemo(() => {
+    const byType: Record<string, number> = {};
+    errorLogs.forEach(l => { byType[l.error_type] = (byType[l.error_type] || 0) + 1; });
+    return byType;
+  }, [errorLogs]);
+
   const updateUserRole = async (userId: string, newRole: string) => {
     const { error } = await supabase.from("user_roles").update({ role: newRole as any }).eq("user_id", userId);
     if (error) toast({ title: "Error updating role", description: error.message, variant: "destructive" });

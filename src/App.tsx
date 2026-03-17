@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 // Lazy load pages for code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const ProfileSetupPage = lazy(() => import("./pages/ProfileSetupPage"));
 const Index = lazy(() => import("./pages/Index"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -46,6 +48,8 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetupPage /></ProtectedRoute>} />
                 <Route path="/app" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

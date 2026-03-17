@@ -18,7 +18,9 @@ import {
   Star, BarChart3, Users, CreditCard, HardDrive, Activity, Package,
   FileText, Lock, LayoutDashboard, TrendingUp, AlertTriangle, RefreshCw,
   Clock, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp, CalendarIcon, X,
+  MessageSquare, Bug,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -120,6 +122,18 @@ export default function AdminPage() {
   const [aimlLoading, setAimlLoading] = useState(false);
   const [aimlImporting, setAimlImporting] = useState<Set<string>>(new Set());
 
+  // System prompts
+  const [systemPrompts, setSystemPrompts] = useState<Record<string, string>>({});
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [promptsSaving, setPromptsSaving] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
+
+  // Error logs
+  type ErrorLog = { id: string; user_id: string | null; error_type: string; error_message: string; error_code: number | null; mode: string | null; model_used: string | null; provider: string | null; created_at: string };
+  const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
+  const [errorLogsLoading, setErrorLogsLoading] = useState(false);
+  const [errorTypeFilter, setErrorTypeFilter] = useState<string>("all");
+
   // Ratings filter
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [ratingSearch, setRatingSearch] = useState("");
@@ -128,7 +142,7 @@ export default function AdminPage() {
 
   useEffect(() => { checkAdmin(); }, []);
   useEffect(() => {
-    if (isAdmin) { fetchData(); fetchRatings(); fetchUsers(); }
+    if (isAdmin) { fetchData(); fetchRatings(); fetchUsers(); fetchSystemPrompts(); fetchErrorLogs(); }
   }, [isAdmin]);
 
   const checkAdmin = async () => {
@@ -164,6 +178,55 @@ export default function AdminPage() {
     if (data) setUserRoles(data as UserRole[]);
     setUsersLoading(false);
   };
+
+  const fetchSystemPrompts = async () => {
+    setPromptsLoading(true);
+    const { data } = await supabase.from("app_settings").select("*").like("key", "system_prompt_%");
+    const prompts: Record<string, string> = {};
+    // Default prompts from the edge function
+    const defaults: Record<string, string> = {
+      system_prompt_enhance: `You are an expert prompt engineer. Your job is to take a user's simple, lazy, or vague prompt and transform it into a highly effective, detailed prompt optimized for the specified target AI model.\n\nRules:\n1. ONLY output the enhanced prompt text — no explanations, no commentary.\n2. Tailor the prompt to the target model's strengths.\n3. Add specificity: context, role, constraints, output format, examples.\n4. Preserve the user's core intent — enhance, don't change the meaning.`,
+      system_prompt_json_convert: `You are a universal prompt normalizer. Convert enhanced text prompts into structured JSON objects by intelligently extracting keys and values.\n\nRules:\n1. ONLY output valid JSON — no explanations, no markdown fences.\n2. Keys must be snake_case. Support strings, arrays, numbers, booleans, and nested objects.\n3. Do NOT hallucinate requirements not present in the prompt.`,
+      system_prompt_assisted_questions: `You are an expert prompt engineer conducting a structured interview. Based on the user's description, generate 4-6 clarifying questions.\n\nRules:\n1. Output ONLY a valid JSON array. No explanations.\n2. Each object: "id", "question", "type" ("select"), "options" (3-5 choices).\n3. Cover: intent, audience, tone, format, constraints, context.`,
+      system_prompt_assisted_generate: `You are an expert prompt engineer. Based on the user's description and their detailed answers, generate the perfect prompt optimized for the target AI model.\n\nRules:\n1. ONLY output the enhanced prompt text.\n2. Incorporate ALL information from the user's answers naturally.`,
+    };
+    // Merge defaults with DB overrides
+    Object.entries(defaults).forEach(([key, val]) => { prompts[key] = val; });
+    if (data) data.forEach((row: any) => { prompts[row.key] = typeof row.value === "string" ? row.value : JSON.stringify(row.value); });
+    setSystemPrompts(prompts);
+    setPromptsLoading(false);
+  };
+
+  const saveSystemPrompt = async (key: string, value: string) => {
+    setPromptsSaving(true);
+    const { data: existing } = await supabase.from("app_settings").select("id").eq("key", key).maybeSingle();
+    if (existing) {
+      await supabase.from("app_settings").update({ value: value as any }).eq("key", key);
+    } else {
+      await supabase.from("app_settings").insert({ key, value: value as any, description: `System prompt: ${key}` });
+    }
+    toast({ title: "System prompt saved" });
+    setEditingPrompt(null);
+    setPromptsSaving(false);
+  };
+
+  const fetchErrorLogs = async () => {
+    setErrorLogsLoading(true);
+    const { data } = await supabase.from("error_logs" as any).select("*").order("created_at", { ascending: false }).limit(200);
+    if (data) setErrorLogs(data as any as ErrorLog[]);
+    setErrorLogsLoading(false);
+  };
+
+  const filteredErrorLogs = useMemo(() => {
+    if (errorTypeFilter === "all") return errorLogs;
+    return errorLogs.filter(l => l.error_type === errorTypeFilter);
+  }, [errorLogs, errorTypeFilter]);
+
+  const errorStats = useMemo(() => {
+    const byType: Record<string, number> = {};
+    errorLogs.forEach(l => { byType[l.error_type] = (byType[l.error_type] || 0) + 1; });
+    return byType;
+  }, [errorLogs]);
 
   const updateUserRole = async (userId: string, newRole: string) => {
     const { error } = await supabase.from("user_roles").update({ role: newRole as any }).eq("user_id", userId);
@@ -454,7 +517,9 @@ export default function AdminPage() {
                 <TabsTrigger value="credits" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Credits</TabsTrigger>
                 <TabsTrigger value="providers" className="gap-1.5 text-xs"><Server className="h-3.5 w-3.5" />Providers</TabsTrigger>
                 <TabsTrigger value="models" className="gap-1.5 text-xs"><Bot className="h-3.5 w-3.5" />Models</TabsTrigger>
+                <TabsTrigger value="prompts" className="gap-1.5 text-xs"><MessageSquare className="h-3.5 w-3.5" />Prompts</TabsTrigger>
                 <TabsTrigger value="ratings" className="gap-1.5 text-xs"><Star className="h-3.5 w-3.5" />Ratings</TabsTrigger>
+                <TabsTrigger value="errors" className="gap-1.5 text-xs"><Bug className="h-3.5 w-3.5" />Errors</TabsTrigger>
                 <TabsTrigger value="storage" className="gap-1.5 text-xs"><HardDrive className="h-3.5 w-3.5" />Storage</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Analytics</TabsTrigger>
                 <TabsTrigger value="plans" className="gap-1.5 text-xs"><Package className="h-3.5 w-3.5" />Plans</TabsTrigger>
@@ -769,6 +834,66 @@ export default function AdminPage() {
               )}
             </TabsContent>
 
+            {/* ─── SYSTEM PROMPTS ─────────────────────────────────────────────────── */}
+            <TabsContent value="prompts" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">View and edit system prompts used by the AI enhancement engine</p>
+                <Button size="sm" variant="outline" onClick={fetchSystemPrompts} disabled={promptsLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-1 ${promptsLoading ? "animate-spin" : ""}`} /> Refresh
+                </Button>
+              </div>
+
+              {promptsLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(systemPrompts).map(([key, value]) => {
+                    const label = key.replace("system_prompt_", "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                    const isEditing = editingPrompt === key;
+                    return (
+                      <Card key={key}>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              {label}
+                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => setEditingPrompt(null)} className="h-7 text-xs">Cancel</Button>
+                                  <Button size="sm" onClick={() => saveSystemPrompt(key, systemPrompts[key])} disabled={promptsSaving} className="h-7 text-xs">
+                                    {promptsSaving && <Loader2 className="h-3 w-3 animate-spin mr-1" />} Save
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button size="sm" variant="outline" onClick={() => setEditingPrompt(key)} className="h-7 text-xs">Edit</Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {isEditing ? (
+                            <Textarea
+                              value={value}
+                              onChange={(e) => setSystemPrompts(prev => ({ ...prev, [key]: e.target.value }))}
+                              className="font-mono text-xs min-h-[200px]"
+                              rows={10}
+                            />
+                          ) : (
+                            <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-md p-3 max-h-[200px] overflow-auto">{value}</pre>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  {Object.keys(systemPrompts).length === 0 && (
+                    <Card><CardContent className="py-8 text-center text-muted-foreground">No system prompts configured</CardContent></Card>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
             {/* ─── RATINGS ────────────────────────────────────────────────────────── */}
             <TabsContent value="ratings" className="space-y-4 mt-4">
               <div className="flex flex-wrap items-center gap-2 justify-between">
@@ -892,6 +1017,68 @@ export default function AdminPage() {
                     );
                   })}
                 </div>
+              )}
+            </TabsContent>
+
+            {/* ─── ERROR LOGS ─────────────────────────────────────────────────────── */}
+            <TabsContent value="errors" className="space-y-4 mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Select value={errorTypeFilter} onValueChange={setErrorTypeFilter}>
+                    <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Errors</SelectItem>
+                      <SelectItem value="rate_limit">Rate Limit</SelectItem>
+                      <SelectItem value="usage_limit">Usage Limit</SelectItem>
+                      <SelectItem value="auth_error">Auth Error</SelectItem>
+                      <SelectItem value="api_key_error">API Key Error</SelectItem>
+                      <SelectItem value="server_error">Server Error</SelectItem>
+                      <SelectItem value="upstream_error">Upstream Error</SelectItem>
+                      <SelectItem value="timeout">Timeout</SelectItem>
+                      <SelectItem value="client_error">Client Error</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button size="sm" variant="outline" onClick={fetchErrorLogs} disabled={errorLogsLoading}>
+                  <RefreshCw className={`h-4 w-4 mr-1 ${errorLogsLoading ? "animate-spin" : ""}`} /> Refresh
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <StatCard icon={Bug} label="Total Errors" value={errorLogs.length} />
+                <StatCard icon={Clock} label="Rate Limits" value={errorStats["rate_limit"] || 0} />
+                <StatCard icon={CreditCard} label="Usage Limits" value={errorStats["usage_limit"] || 0} />
+                <StatCard icon={AlertTriangle} label="Server Errors" value={(errorStats["server_error"] || 0) + (errorStats["upstream_error"] || 0)} />
+              </div>
+
+              {errorLogsLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : filteredErrorLogs.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">No error logs found</CardContent></Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[500px]">
+                      <div className="divide-y">
+                        {filteredErrorLogs.map(log => (
+                          <div key={log.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={log.error_type === "rate_limit" ? "secondary" : log.error_type === "usage_limit" ? "outline" : "destructive"} className="text-[10px] px-1.5 py-0 h-4">
+                                {log.error_type.replace(/_/g, " ")}
+                              </Badge>
+                              {log.error_code && <span className="text-[10px] text-muted-foreground font-mono">{log.error_code}</span>}
+                              {log.mode && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{log.mode}</Badge>}
+                              {log.model_used && <span className="text-[10px] text-muted-foreground">{log.model_used}</span>}
+                              <span className="text-[10px] text-muted-foreground ml-auto">{new Date(log.created_at).toLocaleString()}</span>
+                            </div>
+                            <p className="text-xs text-foreground/80 truncate">{log.error_message}</p>
+                            {log.user_id && <p className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">User: {log.user_id.slice(0, 8)}...</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 

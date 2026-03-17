@@ -113,6 +113,13 @@ export default function AdminPage() {
   const [orLoading, setOrLoading] = useState(false);
   const [orImporting, setOrImporting] = useState<Set<string>>(new Set());
 
+  // AIML API browser
+  const [aimlBrowseOpen, setAimlBrowseOpen] = useState(false);
+  const [aimlModels, setAimlModels] = useState<OpenRouterModel[]>([]);
+  const [aimlSearch, setAimlSearch] = useState("");
+  const [aimlLoading, setAimlLoading] = useState(false);
+  const [aimlImporting, setAimlImporting] = useState<Set<string>>(new Set());
+
   // Ratings filter
   const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [ratingSearch, setRatingSearch] = useState("");

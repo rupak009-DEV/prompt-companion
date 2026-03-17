@@ -127,6 +127,45 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          created_at: string
+          error_code: number | null
+          error_message: string
+          error_type: string
+          id: string
+          mode: string | null
+          model_used: string | null
+          provider: string | null
+          request_context: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_code?: number | null
+          error_message: string
+          error_type: string
+          id?: string
+          mode?: string | null
+          model_used?: string | null
+          provider?: string | null
+          request_context?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_code?: number | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          mode?: string | null
+          model_used?: string | null
+          provider?: string | null
+          request_context?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           bio: string | null
@@ -137,6 +176,7 @@ export type Database = {
           id: string
           occupation: string | null
           phone: string | null
+          theme_preference: string | null
           updated_at: string | null
           user_id: string
           website: string | null
@@ -150,6 +190,7 @@ export type Database = {
           id?: string
           occupation?: string | null
           phone?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
           user_id: string
           website?: string | null
@@ -163,6 +204,7 @@ export type Database = {
           id?: string
           occupation?: string | null
           phone?: string | null
+          theme_preference?: string | null
           updated_at?: string | null
           user_id?: string
           website?: string | null

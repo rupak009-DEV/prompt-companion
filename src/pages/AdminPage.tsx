@@ -439,6 +439,8 @@ export default function AdminPage() {
       if (ratingFilter === "positive") list = list.filter(r => r.rating >= 4);
       else if (ratingFilter === "negative") list = list.filter(r => r.rating <= 2);
       else if (ratingFilter === "neutral") list = list.filter(r => r.rating === 3);
+      else if (ratingFilter === "system") list = list.filter(r => r.action_type === "system");
+      else if (ratingFilter === "user") list = list.filter(r => r.action_type !== "system");
       else list = list.filter(r => r.mode === ratingFilter);
     }
     if (ratingSearch.trim()) {
@@ -901,8 +903,10 @@ export default function AdminPage() {
                   <Input placeholder="Search prompts, models..." value={ratingSearch} onChange={e => setRatingSearch(e.target.value)} className="h-8 w-56 text-xs" />
                   <Select value={ratingFilter} onValueChange={setRatingFilter}>
                     <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                     <SelectContent>
                       <SelectItem value="all">All Ratings</SelectItem>
+                      <SelectItem value="system">System Generated</SelectItem>
+                      <SelectItem value="user">User Rated</SelectItem>
                       <SelectItem value="positive">Positive (4-5★)</SelectItem>
                       <SelectItem value="neutral">Neutral (3★)</SelectItem>
                       <SelectItem value="negative">Negative (1-2★)</SelectItem>
@@ -975,6 +979,7 @@ export default function AdminPage() {
                           >
                             <StarRow rating={r.rating} />
                             <div className="flex items-center gap-1.5 shrink-0">
+                              {r.action_type === "system" && <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0 h-4">System</Badge>}
                               {r.mode && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 capitalize">{r.mode}</Badge>}
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{r.action_type}</Badge>
                             </div>

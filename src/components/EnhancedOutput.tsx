@@ -99,6 +99,7 @@ function EnhancedOutputComponent({
           action_type: "system",
           ai_model_used: aiModelUsed || null,
           generation_time_ms: generationTimeMs || null,
+          quality_score: score,
         } as any);
       } catch {
         // silently fail

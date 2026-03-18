@@ -1096,11 +1096,12 @@ export default function AdminPage() {
               ) : filteredErrorLogs.length === 0 ? (
                 <Card><CardContent className="py-8 text-center text-muted-foreground">No error logs found</CardContent></Card>
               ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <ScrollArea className="h-[500px]">
+                <>
+                  <p className="text-xs text-muted-foreground">{filteredErrorLogs.length} errors</p>
+                  <Card>
+                    <CardContent className="p-0">
                       <div className="divide-y">
-                        {filteredErrorLogs.map(log => (
+                        {filteredErrorLogs.slice((errorsPage - 1) * ITEMS_PER_PAGE, errorsPage * ITEMS_PER_PAGE).map(log => (
                           <div key={log.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant={log.error_type === "rate_limit" ? "secondary" : log.error_type === "usage_limit" ? "outline" : "destructive"} className="text-[10px] px-1.5 py-0 h-4">
@@ -1116,9 +1117,10 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                  <PaginationControls page={errorsPage} totalPages={Math.ceil(filteredErrorLogs.length / ITEMS_PER_PAGE)} onPageChange={setErrorsPage} />
+                </>
               )}
             </TabsContent>
 

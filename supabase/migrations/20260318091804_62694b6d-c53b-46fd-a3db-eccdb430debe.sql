@@ -1,0 +1,1 @@
+ALTER TABLE public.prompt_ratings ADD COLUMN quality_score integer DEFAULT NULL;

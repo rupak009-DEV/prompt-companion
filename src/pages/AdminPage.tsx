@@ -18,7 +18,7 @@ import {
   Star, BarChart3, Users, CreditCard, HardDrive, Activity, Package,
   FileText, Lock, LayoutDashboard, TrendingUp, AlertTriangle, RefreshCw,
   Clock, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp, CalendarIcon, X,
-  MessageSquare, Bug,
+  MessageSquare, Bug, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
@@ -45,6 +45,7 @@ type PromptRating = {
   original_prompt: string | null; enhanced_prompt: string;
   target_model: string | null; mode: string | null; action_type: string;
   ai_model_used: string | null; generation_time_ms: number | null; created_at: string;
+  quality_score: number | null;
 };
 type UserRole = { id: string; user_id: string; role: string; created_at: string | null };
 type OpenRouterModel = {
@@ -85,6 +86,33 @@ const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string;
     </CardContent>
   </Card>
 );
+
+const QualityBadge = ({ score }: { score: number | null }) => {
+  if (score === null || score === undefined) return null;
+  const color = score >= 8 ? "text-green-500" : score >= 5 ? "text-yellow-500" : "text-destructive";
+  return (
+    <span className={`text-[10px] font-bold ${color} bg-muted px-1.5 py-0.5 rounded`}>
+      {score}/10
+    </span>
+  );
+};
+
+const PaginationControls = ({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-2 pt-4">
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <ChevronLeft className="h-3 w-3" /> Prev
+      </Button>
+      <span className="text-xs text-muted-foreground">
+        Page {page} of {totalPages}
+      </span>
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+        Next <ChevronRight className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+};
 
 // ── Main Component ──────────────────────────────────────────────────────────────
 export default function AdminPage() {
@@ -139,6 +167,12 @@ export default function AdminPage() {
   const [ratingSearch, setRatingSearch] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  // Pagination
+  const [ratingsPage, setRatingsPage] = useState(1);
+  const [errorsPage, setErrorsPage] = useState(1);
+  const [logsPage, setLogsPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
   useEffect(() => { checkAdmin(); }, []);
   useEffect(() => {
@@ -454,6 +488,10 @@ export default function AdminPage() {
     }
     return list;
   }, [dateFilteredRatings, ratingFilter, ratingSearch]);
+
+  // Reset pagination on filter changes
+  useEffect(() => { setRatingsPage(1); }, [ratingFilter, ratingSearch, dateFrom, dateTo]);
+  useEffect(() => { setErrorsPage(1); }, [errorTypeFilter]);
 
   const exportRatingsCSV = () => {
     const headers = ["ID", "Date", "Rating", "Mode", "Action Type", "AI Model Used", "Target AI", "Gen Time (ms)", "User Input", "Enhanced Output"];
@@ -967,16 +1005,17 @@ export default function AdminPage() {
                 <Card><CardContent className="py-8 text-center text-muted-foreground">No ratings found</CardContent></Card>
               ) : (
                 <div className="space-y-2">
-                  {filteredRatings.map(r => {
+                  <p className="text-xs text-muted-foreground">{filteredRatings.length} results</p>
+                  {filteredRatings.slice((ratingsPage - 1) * ITEMS_PER_PAGE, ratingsPage * ITEMS_PER_PAGE).map(r => {
                     const isExpanded = expandedRating === r.id;
                     return (
                       <Card key={r.id} className="overflow-hidden">
                         <CardContent className="p-0">
-                          {/* Collapsed header row */}
                           <button
                             className="w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors text-left"
                             onClick={() => setExpandedRating(isExpanded ? null : r.id)}
                           >
+                            <QualityBadge score={r.quality_score} />
                             <StarRow rating={r.rating} />
                             <div className="flex items-center gap-1.5 shrink-0">
                               {r.action_type === "system" && <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0 h-4">System</Badge>}
@@ -992,11 +1031,10 @@ export default function AdminPage() {
                             </div>
                           </button>
 
-                          {/* Expanded detail */}
                           {isExpanded && (
                             <div className="px-4 pb-4 pt-1 space-y-3 border-t bg-muted/20">
-                              {/* Meta row */}
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                <span><span className="font-semibold text-foreground">Quality Score:</span> <span className="text-muted-foreground">{r.quality_score !== null ? `${r.quality_score}/10` : "N/A"}</span></span>
                                 <span><span className="font-semibold text-foreground">AI Model:</span> <span className="text-muted-foreground">{r.ai_model_used || "N/A"}</span></span>
                                 <span><span className="font-semibold text-foreground">Target AI:</span> <span className="text-muted-foreground">{r.target_model || "N/A"}</span></span>
                                 {r.generation_time_ms != null && (
@@ -1021,6 +1059,7 @@ export default function AdminPage() {
                       </Card>
                     );
                   })}
+                  <PaginationControls page={ratingsPage} totalPages={Math.ceil(filteredRatings.length / ITEMS_PER_PAGE)} onPageChange={setRatingsPage} />
                 </div>
               )}
             </TabsContent>
@@ -1061,11 +1100,12 @@ export default function AdminPage() {
               ) : filteredErrorLogs.length === 0 ? (
                 <Card><CardContent className="py-8 text-center text-muted-foreground">No error logs found</CardContent></Card>
               ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <ScrollArea className="h-[500px]">
+                <>
+                  <p className="text-xs text-muted-foreground">{filteredErrorLogs.length} errors</p>
+                  <Card>
+                    <CardContent className="p-0">
                       <div className="divide-y">
-                        {filteredErrorLogs.map(log => (
+                        {filteredErrorLogs.slice((errorsPage - 1) * ITEMS_PER_PAGE, errorsPage * ITEMS_PER_PAGE).map(log => (
                           <div key={log.id} className="px-4 py-3 hover:bg-muted/30 transition-colors">
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant={log.error_type === "rate_limit" ? "secondary" : log.error_type === "usage_limit" ? "outline" : "destructive"} className="text-[10px] px-1.5 py-0 h-4">
@@ -1081,9 +1121,10 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                  <PaginationControls page={errorsPage} totalPages={Math.ceil(filteredErrorLogs.length / ITEMS_PER_PAGE)} onPageChange={setErrorsPage} />
+                </>
               )}
             </TabsContent>
 
@@ -1237,29 +1278,36 @@ export default function AdminPage() {
             {/* ─── LOGS ───────────────────────────────────────────────────────────── */}
             <TabsContent value="logs" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Recent activity log based on prompt ratings</p>
+                <p className="text-sm text-muted-foreground">All enhancement activity — every prompt enhanced is logged here</p>
                 <Button size="sm" variant="outline" onClick={fetchRatings} disabled={ratingsLoading}>
                   <RefreshCw className={`h-4 w-4 mr-1 ${ratingsLoading ? "animate-spin" : ""}`} /> Refresh
                 </Button>
               </div>
 
-              <Card>
-                <CardContent className="p-0">
-                  <ScrollArea className="h-[520px]">
-                    {ratingsLoading ? (
-                      <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                    ) : ratings.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-12">No activity yet</p>
-                    ) : (
+              {ratingsLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : ratings.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">No activity yet</CardContent></Card>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">{ratings.length} entries</p>
+                  <Card>
+                    <CardContent className="p-0">
                       <div className="divide-y font-mono text-xs">
-                        {ratings.map(r => (
+                        {ratings.slice((logsPage - 1) * ITEMS_PER_PAGE, logsPage * ITEMS_PER_PAGE).map(r => (
                           <div key={r.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-muted/20">
                             <span className="text-muted-foreground/60 shrink-0 tabular-nums">
                               {new Date(r.created_at).toISOString().replace("T", " ").slice(0, 19)}
                             </span>
-                            <span className={`shrink-0 font-semibold ${r.rating >= 4 ? "text-green-500" : r.rating <= 2 ? "text-destructive" : "text-yellow-500"}`}>
-                              [{r.rating}★]
-                            </span>
+                            {r.quality_score !== null && r.quality_score !== undefined ? (
+                              <span className={`shrink-0 font-semibold ${r.quality_score >= 8 ? "text-green-500" : r.quality_score >= 5 ? "text-yellow-500" : "text-destructive"}`}>
+                                [{r.quality_score}/10]
+                              </span>
+                            ) : (
+                              <span className={`shrink-0 font-semibold ${r.rating >= 4 ? "text-green-500" : r.rating <= 2 ? "text-destructive" : "text-yellow-500"}`}>
+                                [{r.rating}★]
+                              </span>
+                            )}
                             <span className="text-primary shrink-0">{r.action_type?.toUpperCase()}</span>
                             <span className="text-muted-foreground shrink-0">{r.mode || "—"}</span>
                             <span className="text-foreground/70 shrink-0">{r.ai_model_used?.split("/").pop() || "N/A"}</span>
@@ -1270,10 +1318,11 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                  <PaginationControls page={logsPage} totalPages={Math.ceil(ratings.length / ITEMS_PER_PAGE)} onPageChange={setLogsPage} />
+                </>
+              )}
             </TabsContent>
 
             {/* ─── SECURITY ───────────────────────────────────────────────────────── */}

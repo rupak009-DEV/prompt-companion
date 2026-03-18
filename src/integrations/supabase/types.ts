@@ -221,6 +221,7 @@ export type Database = {
           id: string
           mode: string | null
           original_prompt: string | null
+          quality_score: number | null
           rating: number
           target_model: string | null
           user_id: string | null
@@ -234,6 +235,7 @@ export type Database = {
           id?: string
           mode?: string | null
           original_prompt?: string | null
+          quality_score?: number | null
           rating: number
           target_model?: string | null
           user_id?: string | null
@@ -247,6 +249,7 @@ export type Database = {
           id?: string
           mode?: string | null
           original_prompt?: string | null
+          quality_score?: number | null
           rating?: number
           target_model?: string | null
           user_id?: string | null

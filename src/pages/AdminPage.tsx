@@ -1274,29 +1274,36 @@ export default function AdminPage() {
             {/* ─── LOGS ───────────────────────────────────────────────────────────── */}
             <TabsContent value="logs" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Recent activity log based on prompt ratings</p>
+                <p className="text-sm text-muted-foreground">All enhancement activity — every prompt enhanced is logged here</p>
                 <Button size="sm" variant="outline" onClick={fetchRatings} disabled={ratingsLoading}>
                   <RefreshCw className={`h-4 w-4 mr-1 ${ratingsLoading ? "animate-spin" : ""}`} /> Refresh
                 </Button>
               </div>
 
-              <Card>
-                <CardContent className="p-0">
-                  <ScrollArea className="h-[520px]">
-                    {ratingsLoading ? (
-                      <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-                    ) : ratings.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-12">No activity yet</p>
-                    ) : (
+              {ratingsLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              ) : ratings.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">No activity yet</CardContent></Card>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">{ratings.length} entries</p>
+                  <Card>
+                    <CardContent className="p-0">
                       <div className="divide-y font-mono text-xs">
-                        {ratings.map(r => (
+                        {ratings.slice((logsPage - 1) * ITEMS_PER_PAGE, logsPage * ITEMS_PER_PAGE).map(r => (
                           <div key={r.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-muted/20">
                             <span className="text-muted-foreground/60 shrink-0 tabular-nums">
                               {new Date(r.created_at).toISOString().replace("T", " ").slice(0, 19)}
                             </span>
-                            <span className={`shrink-0 font-semibold ${r.rating >= 4 ? "text-green-500" : r.rating <= 2 ? "text-destructive" : "text-yellow-500"}`}>
-                              [{r.rating}★]
-                            </span>
+                            {r.quality_score !== null && r.quality_score !== undefined ? (
+                              <span className={`shrink-0 font-semibold ${r.quality_score >= 8 ? "text-green-500" : r.quality_score >= 5 ? "text-yellow-500" : "text-destructive"}`}>
+                                [{r.quality_score}/10]
+                              </span>
+                            ) : (
+                              <span className={`shrink-0 font-semibold ${r.rating >= 4 ? "text-green-500" : r.rating <= 2 ? "text-destructive" : "text-yellow-500"}`}>
+                                [{r.rating}★]
+                              </span>
+                            )}
                             <span className="text-primary shrink-0">{r.action_type?.toUpperCase()}</span>
                             <span className="text-muted-foreground shrink-0">{r.mode || "—"}</span>
                             <span className="text-foreground/70 shrink-0">{r.ai_model_used?.split("/").pop() || "N/A"}</span>
@@ -1307,10 +1314,11 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                  <PaginationControls page={logsPage} totalPages={Math.ceil(ratings.length / ITEMS_PER_PAGE)} onPageChange={setLogsPage} />
+                </>
+              )}
             </TabsContent>
 
             {/* ─── SECURITY ───────────────────────────────────────────────────────── */}

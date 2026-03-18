@@ -45,6 +45,7 @@ type PromptRating = {
   original_prompt: string | null; enhanced_prompt: string;
   target_model: string | null; mode: string | null; action_type: string;
   ai_model_used: string | null; generation_time_ms: number | null; created_at: string;
+  quality_score: number | null;
 };
 type UserRole = { id: string; user_id: string; role: string; created_at: string | null };
 type OpenRouterModel = {

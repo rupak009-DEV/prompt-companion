@@ -1001,16 +1001,17 @@ export default function AdminPage() {
                 <Card><CardContent className="py-8 text-center text-muted-foreground">No ratings found</CardContent></Card>
               ) : (
                 <div className="space-y-2">
-                  {filteredRatings.map(r => {
+                  <p className="text-xs text-muted-foreground">{filteredRatings.length} results</p>
+                  {filteredRatings.slice((ratingsPage - 1) * ITEMS_PER_PAGE, ratingsPage * ITEMS_PER_PAGE).map(r => {
                     const isExpanded = expandedRating === r.id;
                     return (
                       <Card key={r.id} className="overflow-hidden">
                         <CardContent className="p-0">
-                          {/* Collapsed header row */}
                           <button
                             className="w-full px-4 py-3 flex items-center gap-3 hover:bg-muted/30 transition-colors text-left"
                             onClick={() => setExpandedRating(isExpanded ? null : r.id)}
                           >
+                            <QualityBadge score={r.quality_score} />
                             <StarRow rating={r.rating} />
                             <div className="flex items-center gap-1.5 shrink-0">
                               {r.action_type === "system" && <Badge className="bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0 h-4">System</Badge>}
@@ -1026,11 +1027,10 @@ export default function AdminPage() {
                             </div>
                           </button>
 
-                          {/* Expanded detail */}
                           {isExpanded && (
                             <div className="px-4 pb-4 pt-1 space-y-3 border-t bg-muted/20">
-                              {/* Meta row */}
                               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                                <span><span className="font-semibold text-foreground">Quality Score:</span> <span className="text-muted-foreground">{r.quality_score !== null ? `${r.quality_score}/10` : "N/A"}</span></span>
                                 <span><span className="font-semibold text-foreground">AI Model:</span> <span className="text-muted-foreground">{r.ai_model_used || "N/A"}</span></span>
                                 <span><span className="font-semibold text-foreground">Target AI:</span> <span className="text-muted-foreground">{r.target_model || "N/A"}</span></span>
                                 {r.generation_time_ms != null && (
@@ -1055,6 +1055,7 @@ export default function AdminPage() {
                       </Card>
                     );
                   })}
+                  <PaginationControls page={ratingsPage} totalPages={Math.ceil(filteredRatings.length / ITEMS_PER_PAGE)} onPageChange={setRatingsPage} />
                 </div>
               )}
             </TabsContent>

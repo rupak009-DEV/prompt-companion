@@ -141,6 +141,12 @@ export default function AdminPage() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
+  // Pagination
+  const [ratingsPage, setRatingsPage] = useState(1);
+  const [errorsPage, setErrorsPage] = useState(1);
+  const [logsPage, setLogsPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
+
   useEffect(() => { checkAdmin(); }, []);
   useEffect(() => {
     if (isAdmin) { fetchData(); fetchRatings(); fetchUsers(); fetchSystemPrompts(); fetchErrorLogs(); }

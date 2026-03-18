@@ -87,6 +87,33 @@ const StatCard = ({ icon: Icon, label, value, sub }: { icon: any; label: string;
   </Card>
 );
 
+const QualityBadge = ({ score }: { score: number | null }) => {
+  if (score === null || score === undefined) return null;
+  const color = score >= 8 ? "text-green-500" : score >= 5 ? "text-yellow-500" : "text-destructive";
+  return (
+    <span className={`text-[10px] font-bold ${color} bg-muted px-1.5 py-0.5 rounded`}>
+      {score}/10
+    </span>
+  );
+};
+
+const PaginationControls = ({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) => {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-center gap-2 pt-4">
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <ChevronLeft className="h-3 w-3" /> Prev
+      </Button>
+      <span className="text-xs text-muted-foreground">
+        Page {page} of {totalPages}
+      </span>
+      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+        Next <ChevronRight className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+};
+
 // ── Main Component ──────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [providers, setProviders] = useState<Provider[]>([]);

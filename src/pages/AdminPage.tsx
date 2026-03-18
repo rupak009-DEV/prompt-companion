@@ -489,6 +489,10 @@ export default function AdminPage() {
     return list;
   }, [dateFilteredRatings, ratingFilter, ratingSearch]);
 
+  // Reset pagination on filter changes
+  useEffect(() => { setRatingsPage(1); }, [ratingFilter, ratingSearch, dateFrom, dateTo]);
+  useEffect(() => { setErrorsPage(1); }, [errorTypeFilter]);
+
   const exportRatingsCSV = () => {
     const headers = ["ID", "Date", "Rating", "Mode", "Action Type", "AI Model Used", "Target AI", "Gen Time (ms)", "User Input", "Enhanced Output"];
     const rows = ratings.map(r => [

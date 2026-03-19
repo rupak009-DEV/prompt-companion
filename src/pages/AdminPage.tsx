@@ -682,14 +682,17 @@ export default function AdminPage() {
                   <CardContent className="p-0">
                     <div className="divide-y">
                       {userRoles.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No users found</p>}
-                      {userRoles.map(u => (
+                      {userRoles.map(u => {
+                        const name = userProfiles[u.user_id];
+                        return (
                         <div key={u.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                              {u.user_id.slice(0, 2).toUpperCase()}
+                              {name ? name.slice(0, 2).toUpperCase() : u.user_id.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-xs font-mono text-muted-foreground">{u.user_id}</p>
+                              {name && <p className="text-sm font-medium text-foreground">{name}</p>}
+                              <p className="text-xs font-mono text-muted-foreground">{u.user_id.slice(0, 12)}...</p>
                               <p className="text-[10px] text-muted-foreground/60">
                                 Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                               </p>
@@ -707,7 +710,8 @@ export default function AdminPage() {
                             </Select>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

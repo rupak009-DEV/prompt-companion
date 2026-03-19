@@ -502,17 +502,32 @@ export default function AdminPage() {
   useEffect(() => { setErrorsPage(1); }, [errorTypeFilter]);
 
   const exportRatingsCSV = () => {
-    const headers = ["ID", "Date", "Rating", "Mode", "Action Type", "AI Model Used", "Target AI", "Gen Time (ms)", "User Input", "Enhanced Output"];
-    const rows = ratings.map(r => [
-      r.id, new Date(r.created_at).toISOString(), r.rating, r.mode || "", r.action_type,
+    const headers = ["ID", "Date", "Rating", "Quality Score", "Mode", "Action Type", "AI Model Used", "Target AI", "Gen Time (ms)", "Username", "User Input", "Enhanced Output"];
+    const rows = filteredRatings.map(r => [
+      r.id, new Date(r.created_at).toISOString(), r.rating, r.quality_score ?? "", r.mode || "", r.action_type,
       r.ai_model_used || "", r.target_model || "", r.generation_time_ms || "",
+      r.user_id ? (userProfiles[r.user_id] || r.user_id.slice(0, 8)) : "Anonymous",
       `"${(r.original_prompt || "").replace(/"/g, '""')}"`,
       `"${r.enhanced_prompt.replace(/"/g, '""')}"`,
     ]);
     const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "ratings.csv"; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "logs_and_ratings.csv"; a.click();
+  };
+
+  const exportErrorsCSV = () => {
+    const headers = ["ID", "Date", "Error Type", "Error Code", "Mode", "Model Used", "Provider", "User ID", "Error Message"];
+    const rows = filteredErrorLogs.map(l => [
+      l.id, new Date(l.created_at).toISOString(), l.error_type, l.error_code || "",
+      l.mode || "", l.model_used || "", l.provider || "",
+      l.user_id ? (userProfiles[l.user_id] || l.user_id.slice(0, 8)) : "",
+      `"${l.error_message.replace(/"/g, '""')}"`,
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "error_logs.csv"; a.click();
   };
 
   // ── Security checks ──────────────────────────────────────────────────────────

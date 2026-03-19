@@ -303,6 +303,23 @@ const EnhancePage = () => {
                       <Wand2 className="h-4 w-4 shrink-0" />
                       <span className="truncate">Enhance for {selectedModel?.label || "AI"}</span>
                     </Button>
+                    {(originalPrompt.trim() || enhancedPrompt) && (
+                      <Button
+                        variant="outline"
+                        size="default"
+                        onClick={() => {
+                          setOriginalPrompt("");
+                          setEnhancedPrompt("");
+                          setAttachedFiles([]);
+                          setWizardData({ intent: "", audience: "", tone: "", format: "", constraints: "" });
+                          setGenerationTimeMs(undefined);
+                        }}
+                        className="gap-1.5 text-xs sm:text-sm shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                        Clear
+                      </Button>
+                    )}
                   </>
                   }
               </div>

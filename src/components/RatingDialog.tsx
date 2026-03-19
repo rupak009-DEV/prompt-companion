@@ -22,6 +22,7 @@ interface RatingDialogProps {
   mode: string;
   aiModelUsed?: string;
   generationTimeMs?: number;
+  qualityScore?: number | null;
   onRated: () => void;
 }
 
@@ -35,6 +36,7 @@ export function RatingDialog({
   mode,
   aiModelUsed,
   generationTimeMs,
+  qualityScore,
   onRated,
 }: RatingDialogProps) {
   const [rating, setRating] = useState(0);
@@ -57,6 +59,7 @@ export function RatingDialog({
       action_type: actionType,
       ai_model_used: aiModelUsed || null,
       generation_time_ms: generationTimeMs || null,
+      quality_score: qualityScore ?? null,
     } as any);
 
     if (error) {

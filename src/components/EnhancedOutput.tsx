@@ -56,6 +56,9 @@ function EnhancedOutputComponent({
   const [ratingOpen, setRatingOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"copy" | "save" | "export" | null>(null);
   const pendingExportFormat = useRef<"txt" | "md" | "pdf" | "json">("txt");
+  
+  // Track if user already rated via Feedback button
+  const [userAlreadyRated, setUserAlreadyRated] = useState(false);
 
   const stats = useMemo(() => {
     const text = enhancedPrompt.trim();
@@ -125,6 +128,7 @@ function EnhancedOutputComponent({
   useMemo(() => {
     setStructuredJson(null);
     setJsonError(null);
+    setUserAlreadyRated(false);
   }, [enhancedPrompt]);
 
   const executeCopy = async () => {
@@ -182,17 +186,29 @@ function EnhancedOutputComponent({
   };
 
   const handleCopy = () => {
+    if (userAlreadyRated) {
+      executeCopy();
+      return;
+    }
     setPendingAction("copy");
     setRatingOpen(true);
   };
 
   const handleSave = () => {
+    if (userAlreadyRated) {
+      executeSave();
+      return;
+    }
     setPendingAction("save");
     setRatingOpen(true);
   };
 
   const handleExport = (format: "txt" | "md" | "pdf" | "json") => {
     pendingExportFormat.current = format;
+    if (userAlreadyRated) {
+      executeExport(format);
+      return;
+    }
     setPendingAction("export");
     setRatingOpen(true);
   };
@@ -256,6 +272,7 @@ function EnhancedOutputComponent({
         mode={mode}
         aiModelUsed={aiModelUsed}
         generationTimeMs={generationTimeMs}
+        qualityScore={score}
         onRated={handleRated}
       />
 
@@ -408,7 +425,16 @@ function EnhancedOutputComponent({
                     <Button size="sm" variant="outline" onClick={onReEnhance} className="text-xs">
                       Re-enhance
                     </Button>
-                    <FeedbackPopover />
+                    <FeedbackPopover
+                      originalPrompt={originalPrompt}
+                      enhancedPrompt={enhancedPrompt}
+                      targetModel={targetModel}
+                      mode={mode}
+                      aiModelUsed={aiModelUsed}
+                      generationTimeMs={generationTimeMs}
+                      qualityScore={score}
+                      onFeedbackRated={() => setUserAlreadyRated(true)}
+                    />
                   </motion.div>
                 )}
 
@@ -421,7 +447,16 @@ function EnhancedOutputComponent({
                     <Button size="sm" variant="outline" onClick={onReEnhance} className="text-xs">
                       Re-enhance
                     </Button>
-                    <FeedbackPopover />
+                    <FeedbackPopover
+                      originalPrompt={originalPrompt}
+                      enhancedPrompt={enhancedPrompt}
+                      targetModel={targetModel}
+                      mode={mode}
+                      aiModelUsed={aiModelUsed}
+                      generationTimeMs={generationTimeMs}
+                      qualityScore={score}
+                      onFeedbackRated={() => setUserAlreadyRated(true)}
+                    />
                   </motion.div>
                 )}
               </motion.div>

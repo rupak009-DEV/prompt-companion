@@ -59,6 +59,7 @@ export function RatingDialog({
       action_type: actionType,
       ai_model_used: aiModelUsed || null,
       generation_time_ms: generationTimeMs || null,
+      quality_score: qualityScore ?? null,
     } as any);
 
     if (error) {

@@ -123,6 +123,7 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [userProfiles, setUserProfiles] = useState<Record<string, string>>({});
   const [usersLoading, setUsersLoading] = useState(false);
   const [ratings, setRatings] = useState<PromptRating[]>([]);
   const [ratingsLoading, setRatingsLoading] = useState(false);

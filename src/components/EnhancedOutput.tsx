@@ -424,7 +424,16 @@ function EnhancedOutputComponent({
                     <Button size="sm" variant="outline" onClick={onReEnhance} className="text-xs">
                       Re-enhance
                     </Button>
-                    <FeedbackPopover />
+                    <FeedbackPopover
+                      originalPrompt={originalPrompt}
+                      enhancedPrompt={enhancedPrompt}
+                      targetModel={targetModel}
+                      mode={mode}
+                      aiModelUsed={aiModelUsed}
+                      generationTimeMs={generationTimeMs}
+                      qualityScore={score}
+                      onFeedbackRated={() => setUserAlreadyRated(true)}
+                    />
                   </motion.div>
                 )}
 

@@ -1110,9 +1110,14 @@ export default function AdminPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" variant="outline" onClick={fetchErrorLogs} disabled={errorLogsLoading}>
-                  <RefreshCw className={`h-4 w-4 mr-1 ${errorLogsLoading ? "animate-spin" : ""}`} /> Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={exportErrorsCSV} disabled={errorLogs.length === 0}>
+                    <Download className="h-4 w-4 mr-1" /> Export CSV
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={fetchErrorLogs} disabled={errorLogsLoading}>
+                    <RefreshCw className={`h-4 w-4 mr-1 ${errorLogsLoading ? "animate-spin" : ""}`} /> Refresh
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

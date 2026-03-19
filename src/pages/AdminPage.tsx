@@ -1049,6 +1049,7 @@ export default function AdminPage() {
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{r.action_type}</Badge>
                             </div>
                             <p className="flex-1 text-xs text-muted-foreground truncate min-w-0">
+                              {r.user_id && userProfiles[r.user_id] && <span className="text-foreground font-medium mr-1.5">{userProfiles[r.user_id]}</span>}
                               {r.original_prompt || r.enhanced_prompt}
                             </p>
                             <div className="flex items-center gap-2 shrink-0">

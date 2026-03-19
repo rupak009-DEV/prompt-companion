@@ -56,6 +56,9 @@ function EnhancedOutputComponent({
   const [ratingOpen, setRatingOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"copy" | "save" | "export" | null>(null);
   const pendingExportFormat = useRef<"txt" | "md" | "pdf" | "json">("txt");
+  
+  // Track if user already rated via Feedback button
+  const [userAlreadyRated, setUserAlreadyRated] = useState(false);
 
   const stats = useMemo(() => {
     const text = enhancedPrompt.trim();

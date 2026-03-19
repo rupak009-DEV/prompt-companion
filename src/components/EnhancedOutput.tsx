@@ -128,6 +128,7 @@ function EnhancedOutputComponent({
   useMemo(() => {
     setStructuredJson(null);
     setJsonError(null);
+    setUserAlreadyRated(false);
   }, [enhancedPrompt]);
 
   const executeCopy = async () => {

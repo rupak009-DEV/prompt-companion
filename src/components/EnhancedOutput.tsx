@@ -271,6 +271,7 @@ function EnhancedOutputComponent({
         mode={mode}
         aiModelUsed={aiModelUsed}
         generationTimeMs={generationTimeMs}
+        qualityScore={score}
         onRated={handleRated}
       />
 

@@ -208,8 +208,16 @@ export default function AdminPage() {
 
   const fetchUsers = async () => {
     setUsersLoading(true);
-    const { data } = await supabase.from("user_roles").select("*").order("created_at", { ascending: false });
-    if (data) setUserRoles(data as UserRole[]);
+    const [rolesRes, profilesRes] = await Promise.all([
+      supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("user_id, full_name"),
+    ]);
+    if (rolesRes.data) setUserRoles(rolesRes.data as UserRole[]);
+    if (profilesRes.data) {
+      const map: Record<string, string> = {};
+      (profilesRes.data as any[]).forEach(p => { if (p.full_name) map[p.user_id] = p.full_name; });
+      setUserProfiles(map);
+    }
     setUsersLoading(false);
   };
 

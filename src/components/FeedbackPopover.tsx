@@ -4,21 +4,63 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MessageSquare, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   disabled?: boolean;
+  originalPrompt?: string;
+  enhancedPrompt?: string;
+  targetModel?: string;
+  mode?: string;
+  aiModelUsed?: string;
+  generationTimeMs?: number;
+  qualityScore?: number | null;
+  onFeedbackRated?: (rating: number) => void;
 }
 
-export function FeedbackPopover({ disabled }: Props) {
+export function FeedbackPopover({
+  disabled,
+  originalPrompt,
+  enhancedPrompt,
+  targetModel,
+  mode,
+  aiModelUsed,
+  generationTimeMs,
+  qualityScore,
+  onFeedbackRated,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [suggestion, setSuggestion] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setSubmitted(true);
     setOpen(false);
+
+    // Save rating to DB if we have prompt data
+    if (rating > 0 && enhancedPrompt) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from("prompt_ratings" as any).insert({
+          user_id: user?.id || null,
+          rating,
+          original_prompt: originalPrompt?.slice(0, 2000) || null,
+          enhanced_prompt: enhancedPrompt.slice(0, 5000),
+          target_model: targetModel || null,
+          mode: mode || null,
+          action_type: "feedback",
+          ai_model_used: aiModelUsed || null,
+          generation_time_ms: generationTimeMs || null,
+          quality_score: qualityScore ?? null,
+        } as any);
+        onFeedbackRated?.(rating);
+      } catch {
+        // silently fail
+      }
+    }
+
     toast({ title: "Thanks for your feedback!" });
   };
 

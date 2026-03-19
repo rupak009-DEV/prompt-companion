@@ -185,17 +185,29 @@ function EnhancedOutputComponent({
   };
 
   const handleCopy = () => {
+    if (userAlreadyRated) {
+      executeCopy();
+      return;
+    }
     setPendingAction("copy");
     setRatingOpen(true);
   };
 
   const handleSave = () => {
+    if (userAlreadyRated) {
+      executeSave();
+      return;
+    }
     setPendingAction("save");
     setRatingOpen(true);
   };
 
   const handleExport = (format: "txt" | "md" | "pdf" | "json") => {
     pendingExportFormat.current = format;
+    if (userAlreadyRated) {
+      executeExport(format);
+      return;
+    }
     setPendingAction("export");
     setRatingOpen(true);
   };

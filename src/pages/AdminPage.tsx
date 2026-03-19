@@ -581,12 +581,11 @@ export default function AdminPage() {
                 <TabsTrigger value="providers" className="gap-1.5 text-xs"><Server className="h-3.5 w-3.5" />Providers</TabsTrigger>
                 <TabsTrigger value="models" className="gap-1.5 text-xs"><Bot className="h-3.5 w-3.5" />Models</TabsTrigger>
                 <TabsTrigger value="prompts" className="gap-1.5 text-xs"><MessageSquare className="h-3.5 w-3.5" />Prompts</TabsTrigger>
-                <TabsTrigger value="ratings" className="gap-1.5 text-xs"><Star className="h-3.5 w-3.5" />Ratings</TabsTrigger>
+                <TabsTrigger value="ratings" className="gap-1.5 text-xs"><Star className="h-3.5 w-3.5" />Logs & Ratings</TabsTrigger>
                 <TabsTrigger value="errors" className="gap-1.5 text-xs"><Bug className="h-3.5 w-3.5" />Errors</TabsTrigger>
                 <TabsTrigger value="storage" className="gap-1.5 text-xs"><HardDrive className="h-3.5 w-3.5" />Storage</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Analytics</TabsTrigger>
                 <TabsTrigger value="plans" className="gap-1.5 text-xs"><Package className="h-3.5 w-3.5" />Plans</TabsTrigger>
-                <TabsTrigger value="logs" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Logs</TabsTrigger>
                 <TabsTrigger value="security" className="gap-1.5 text-xs"><Lock className="h-3.5 w-3.5" />Security</TabsTrigger>
               </TabsList>
             </ScrollArea>

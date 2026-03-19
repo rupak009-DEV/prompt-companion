@@ -123,6 +123,7 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [userProfiles, setUserProfiles] = useState<Record<string, string>>({});
   const [usersLoading, setUsersLoading] = useState(false);
   const [ratings, setRatings] = useState<PromptRating[]>([]);
   const [ratingsLoading, setRatingsLoading] = useState(false);
@@ -171,7 +172,6 @@ export default function AdminPage() {
   // Pagination
   const [ratingsPage, setRatingsPage] = useState(1);
   const [errorsPage, setErrorsPage] = useState(1);
-  const [logsPage, setLogsPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
   useEffect(() => { checkAdmin(); }, []);
@@ -208,8 +208,16 @@ export default function AdminPage() {
 
   const fetchUsers = async () => {
     setUsersLoading(true);
-    const { data } = await supabase.from("user_roles").select("*").order("created_at", { ascending: false });
-    if (data) setUserRoles(data as UserRole[]);
+    const [rolesRes, profilesRes] = await Promise.all([
+      supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("user_id, full_name"),
+    ]);
+    if (rolesRes.data) setUserRoles(rolesRes.data as UserRole[]);
+    if (profilesRes.data) {
+      const map: Record<string, string> = {};
+      (profilesRes.data as any[]).forEach(p => { if (p.full_name) map[p.user_id] = p.full_name; });
+      setUserProfiles(map);
+    }
     setUsersLoading(false);
   };
 
@@ -494,17 +502,32 @@ export default function AdminPage() {
   useEffect(() => { setErrorsPage(1); }, [errorTypeFilter]);
 
   const exportRatingsCSV = () => {
-    const headers = ["ID", "Date", "Rating", "Mode", "Action Type", "AI Model Used", "Target AI", "Gen Time (ms)", "User Input", "Enhanced Output"];
-    const rows = ratings.map(r => [
-      r.id, new Date(r.created_at).toISOString(), r.rating, r.mode || "", r.action_type,
+    const headers = ["ID", "Date", "Rating", "Quality Score", "Mode", "Action Type", "AI Model Used", "Target AI", "Gen Time (ms)", "Username", "User Input", "Enhanced Output"];
+    const rows = filteredRatings.map(r => [
+      r.id, new Date(r.created_at).toISOString(), r.rating, r.quality_score ?? "", r.mode || "", r.action_type,
       r.ai_model_used || "", r.target_model || "", r.generation_time_ms || "",
+      r.user_id ? (userProfiles[r.user_id] || r.user_id.slice(0, 8)) : "Anonymous",
       `"${(r.original_prompt || "").replace(/"/g, '""')}"`,
       `"${r.enhanced_prompt.replace(/"/g, '""')}"`,
     ]);
     const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "ratings.csv"; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "logs_and_ratings.csv"; a.click();
+  };
+
+  const exportErrorsCSV = () => {
+    const headers = ["ID", "Date", "Error Type", "Error Code", "Mode", "Model Used", "Provider", "User ID", "Error Message"];
+    const rows = filteredErrorLogs.map(l => [
+      l.id, new Date(l.created_at).toISOString(), l.error_type, l.error_code || "",
+      l.mode || "", l.model_used || "", l.provider || "",
+      l.user_id ? (userProfiles[l.user_id] || l.user_id.slice(0, 8)) : "",
+      `"${l.error_message.replace(/"/g, '""')}"`,
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "error_logs.csv"; a.click();
   };
 
   // ── Security checks ──────────────────────────────────────────────────────────
@@ -558,12 +581,11 @@ export default function AdminPage() {
                 <TabsTrigger value="providers" className="gap-1.5 text-xs"><Server className="h-3.5 w-3.5" />Providers</TabsTrigger>
                 <TabsTrigger value="models" className="gap-1.5 text-xs"><Bot className="h-3.5 w-3.5" />Models</TabsTrigger>
                 <TabsTrigger value="prompts" className="gap-1.5 text-xs"><MessageSquare className="h-3.5 w-3.5" />Prompts</TabsTrigger>
-                <TabsTrigger value="ratings" className="gap-1.5 text-xs"><Star className="h-3.5 w-3.5" />Ratings</TabsTrigger>
+                <TabsTrigger value="ratings" className="gap-1.5 text-xs"><Star className="h-3.5 w-3.5" />Logs & Ratings</TabsTrigger>
                 <TabsTrigger value="errors" className="gap-1.5 text-xs"><Bug className="h-3.5 w-3.5" />Errors</TabsTrigger>
                 <TabsTrigger value="storage" className="gap-1.5 text-xs"><HardDrive className="h-3.5 w-3.5" />Storage</TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" />Analytics</TabsTrigger>
                 <TabsTrigger value="plans" className="gap-1.5 text-xs"><Package className="h-3.5 w-3.5" />Plans</TabsTrigger>
-                <TabsTrigger value="logs" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Logs</TabsTrigger>
                 <TabsTrigger value="security" className="gap-1.5 text-xs"><Lock className="h-3.5 w-3.5" />Security</TabsTrigger>
               </TabsList>
             </ScrollArea>
@@ -660,14 +682,17 @@ export default function AdminPage() {
                   <CardContent className="p-0">
                     <div className="divide-y">
                       {userRoles.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No users found</p>}
-                      {userRoles.map(u => (
+                      {userRoles.map(u => {
+                        const name = userProfiles[u.user_id];
+                        return (
                         <div key={u.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
-                              {u.user_id.slice(0, 2).toUpperCase()}
+                              {name ? name.slice(0, 2).toUpperCase() : u.user_id.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-xs font-mono text-muted-foreground">{u.user_id}</p>
+                              {name && <p className="text-sm font-medium text-foreground">{name}</p>}
+                              <p className="text-xs font-mono text-muted-foreground">{u.user_id.slice(0, 12)}...</p>
                               <p className="text-[10px] text-muted-foreground/60">
                                 Joined {u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}
                               </p>
@@ -685,7 +710,8 @@ export default function AdminPage() {
                             </Select>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -1023,6 +1049,7 @@ export default function AdminPage() {
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{r.action_type}</Badge>
                             </div>
                             <p className="flex-1 text-xs text-muted-foreground truncate min-w-0">
+                              {r.user_id && userProfiles[r.user_id] && <span className="text-foreground font-medium mr-1.5">{userProfiles[r.user_id]}</span>}
                               {r.original_prompt || r.enhanced_prompt}
                             </p>
                             <div className="flex items-center gap-2 shrink-0">
@@ -1083,9 +1110,14 @@ export default function AdminPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" variant="outline" onClick={fetchErrorLogs} disabled={errorLogsLoading}>
-                  <RefreshCw className={`h-4 w-4 mr-1 ${errorLogsLoading ? "animate-spin" : ""}`} /> Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={exportErrorsCSV} disabled={errorLogs.length === 0}>
+                    <Download className="h-4 w-4 mr-1" /> Export CSV
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={fetchErrorLogs} disabled={errorLogsLoading}>
+                    <RefreshCw className={`h-4 w-4 mr-1 ${errorLogsLoading ? "animate-spin" : ""}`} /> Refresh
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1275,55 +1307,6 @@ export default function AdminPage() {
               </Card>
             </TabsContent>
 
-            {/* ─── LOGS ───────────────────────────────────────────────────────────── */}
-            <TabsContent value="logs" className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">All enhancement activity — every prompt enhanced is logged here</p>
-                <Button size="sm" variant="outline" onClick={fetchRatings} disabled={ratingsLoading}>
-                  <RefreshCw className={`h-4 w-4 mr-1 ${ratingsLoading ? "animate-spin" : ""}`} /> Refresh
-                </Button>
-              </div>
-
-              {ratingsLoading ? (
-                <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-              ) : ratings.length === 0 ? (
-                <Card><CardContent className="py-8 text-center text-muted-foreground">No activity yet</CardContent></Card>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground">{ratings.length} entries</p>
-                  <Card>
-                    <CardContent className="p-0">
-                      <div className="divide-y font-mono text-xs">
-                        {ratings.slice((logsPage - 1) * ITEMS_PER_PAGE, logsPage * ITEMS_PER_PAGE).map(r => (
-                          <div key={r.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-muted/20">
-                            <span className="text-muted-foreground/60 shrink-0 tabular-nums">
-                              {new Date(r.created_at).toISOString().replace("T", " ").slice(0, 19)}
-                            </span>
-                            {r.quality_score !== null && r.quality_score !== undefined ? (
-                              <span className={`shrink-0 font-semibold ${r.quality_score >= 8 ? "text-green-500" : r.quality_score >= 5 ? "text-yellow-500" : "text-destructive"}`}>
-                                [{r.quality_score}/10]
-                              </span>
-                            ) : (
-                              <span className={`shrink-0 font-semibold ${r.rating >= 4 ? "text-green-500" : r.rating <= 2 ? "text-destructive" : "text-yellow-500"}`}>
-                                [{r.rating}★]
-                              </span>
-                            )}
-                            <span className="text-primary shrink-0">{r.action_type?.toUpperCase()}</span>
-                            <span className="text-muted-foreground shrink-0">{r.mode || "—"}</span>
-                            <span className="text-foreground/70 shrink-0">{r.ai_model_used?.split("/").pop() || "N/A"}</span>
-                            <span className="text-muted-foreground truncate">{r.original_prompt?.slice(0, 80) || r.enhanced_prompt.slice(0, 80)}</span>
-                            {r.generation_time_ms != null && (
-                              <span className="text-muted-foreground/60 shrink-0">{(r.generation_time_ms / 1000).toFixed(1)}s</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <PaginationControls page={logsPage} totalPages={Math.ceil(ratings.length / ITEMS_PER_PAGE)} onPageChange={setLogsPage} />
-                </>
-              )}
-            </TabsContent>
 
             {/* ─── SECURITY ───────────────────────────────────────────────────────── */}
             <TabsContent value="security" className="space-y-4 mt-4">

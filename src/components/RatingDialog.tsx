@@ -36,6 +36,7 @@ export function RatingDialog({
   mode,
   aiModelUsed,
   generationTimeMs,
+  qualityScore,
   onRated,
 }: RatingDialogProps) {
   const [rating, setRating] = useState(0);

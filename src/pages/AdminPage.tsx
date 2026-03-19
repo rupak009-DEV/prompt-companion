@@ -172,7 +172,6 @@ export default function AdminPage() {
   // Pagination
   const [ratingsPage, setRatingsPage] = useState(1);
   const [errorsPage, setErrorsPage] = useState(1);
-  const [logsPage, setLogsPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
   useEffect(() => { checkAdmin(); }, []);

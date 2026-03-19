@@ -22,6 +22,7 @@ interface RatingDialogProps {
   mode: string;
   aiModelUsed?: string;
   generationTimeMs?: number;
+  qualityScore?: number | null;
   onRated: () => void;
 }
 

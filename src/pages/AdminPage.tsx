@@ -842,17 +842,12 @@ export default function AdminPage() {
             <TabsContent value="models" className="space-y-4 mt-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">Add models and select which one to use</p>
-                <div className="flex items-center gap-2">
-                  {openRouterProvider && (
-                    <Button size="sm" variant="outline" onClick={handleOpenBrowse}>
-                      <Search className="h-4 w-4 mr-1" /> Browse OpenRouter
+                <div className="flex items-center gap-2 flex-wrap">
+                  {activeBrowsable.map(bp => (
+                    <Button key={bp.type} size="sm" variant="outline" onClick={() => handleOpenBrowse(bp.type)}>
+                      <Search className="h-4 w-4 mr-1" /> Browse {bp.label}
                     </Button>
-                  )}
-                  {aimlProvider && (
-                    <Button size="sm" variant="outline" onClick={handleOpenAimlBrowse}>
-                      <Search className="h-4 w-4 mr-1" /> Browse AIML API
-                    </Button>
-                  )}
+                  ))}
                   <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" disabled={providers.length === 0}><Plus className="h-4 w-4 mr-1" /> Add Model</Button>

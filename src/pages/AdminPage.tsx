@@ -397,88 +397,63 @@ export default function AdminPage() {
     setActiveModel(value); toast({ title: "Active model updated" }); setSaving(false);
   };
 
-  // ── OpenRouter browser ───────────────────────────────────────────────────────
-  const openRouterProvider = providers.find(p => p.provider_type === "openrouter" && p.is_active);
-
-  const fetchOpenRouterModels = async () => {
-    setOrLoading(true);
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/models");
-      const data = await res.json();
-      setOrModels(data.data || []);
-    } catch { toast({ title: "Failed to fetch OpenRouter models", variant: "destructive" }); }
-    setOrLoading(false);
-  };
-
-  const handleOpenBrowse = () => { setBrowseDialogOpen(true); if (orModels.length === 0) fetchOpenRouterModels(); };
-
-  const filteredOrModels = useMemo(() => {
-    if (!orSearch.trim()) return orModels.slice(0, 50);
-    const q = orSearch.toLowerCase();
-    return orModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 50);
-  }, [orModels, orSearch]);
-
+  // ── Generic model browser ──────────────────────────────────────────────────
   const existingModelIds = useMemo(() => new Set(models.map(m => m.model_id)), [models]);
 
-  const importOrModel = async (orModel: OpenRouterModel) => {
-    if (!openRouterProvider) return;
-    setOrImporting(prev => new Set(prev).add(orModel.id));
-    const isFree = orModel.pricing?.prompt === "0" && orModel.pricing?.completion === "0";
-    const { error } = await supabase.from("ai_models").insert({
-      display_name: orModel.name, model_id: orModel.id, provider_id: openRouterProvider.id,
-      description: orModel.description?.slice(0, 200) || null,
-      is_active: true, is_free: isFree, context_window: orModel.context_length || null,
-    });
-    if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
-    else { toast({ title: `Imported ${orModel.name}` }); fetchData(); }
-    setOrImporting(prev => { const n = new Set(prev); n.delete(orModel.id); return n; });
-  };
+  const activeBrowsable = useMemo(() =>
+    BROWSABLE_PROVIDERS.filter(bp => providers.some(p => p.provider_type === bp.type && p.is_active)),
+    [providers]
+  );
 
-  // ── AIML API browser ────────────────────────────────────────────────────────
-  const aimlProvider = providers.find(p => p.provider_type === "aimlapi" && p.is_active);
-
-  const fetchAimlModels = async () => {
-    setAimlLoading(true);
+  const fetchBrowseModels = async (providerType: string) => {
+    const bp = BROWSABLE_PROVIDERS.find(b => b.type === providerType);
+    if (!bp) return;
+    setBrowseLoading(true);
     try {
-      const res = await fetch("https://api.aimlapi.com/v1/models", {
-        headers: aimlProvider?.api_key_encrypted ? { Authorization: `Bearer ${aimlProvider.api_key_encrypted}` } : {},
-      });
+      const provider = providers.find(p => p.provider_type === providerType && p.is_active);
+      const headers: Record<string, string> = {};
+      if (bp.needsAuth && provider?.api_key_encrypted) {
+        headers["Authorization"] = `Bearer ${provider.api_key_encrypted}`;
+      }
+      const res = await fetch(bp.fetchUrl, { headers });
       const data = await res.json();
-      const modelList = (data.data || data || []).map((m: any) => ({
-        id: m.id || m.model_id || "",
-        name: m.name || m.id || m.model_id || "",
-        description: m.description || "",
-        pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
-        context_length: m.context_length || m.max_context_length || 0,
-      }));
-      setAimlModels(modelList);
+      setBrowseModels(bp.parseModels(data));
     } catch {
-      toast({ title: "Failed to fetch AIML API models", variant: "destructive" });
+      toast({ title: `Failed to fetch ${bp.label} models`, variant: "destructive" });
     }
-    setAimlLoading(false);
+    setBrowseLoading(false);
   };
 
-  const handleOpenAimlBrowse = () => { setAimlBrowseOpen(true); if (aimlModels.length === 0) fetchAimlModels(); };
+  const handleOpenBrowse = (providerType: string) => {
+    setBrowseProviderType(providerType);
+    setBrowseModels([]);
+    setBrowseSearch("");
+    setBrowseDialogOpen(true);
+    fetchBrowseModels(providerType);
+  };
 
-  const filteredAimlModels = useMemo(() => {
-    if (!aimlSearch.trim()) return aimlModels.slice(0, 100);
-    const q = aimlSearch.toLowerCase();
-    return aimlModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 100);
-  }, [aimlModels, aimlSearch]);
+  const filteredBrowseModels = useMemo(() => {
+    if (!browseSearch.trim()) return browseModels.slice(0, 100);
+    const q = browseSearch.toLowerCase();
+    return browseModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 100);
+  }, [browseModels, browseSearch]);
 
-  const importAimlModel = async (model: OpenRouterModel) => {
-    if (!aimlProvider) return;
-    setAimlImporting(prev => new Set(prev).add(model.id));
+  const importBrowseModel = async (model: OpenRouterModel) => {
+    const provider = providers.find(p => p.provider_type === browseProviderType && p.is_active);
+    if (!provider) return;
+    setBrowseImporting(prev => new Set(prev).add(model.id));
     const isFree = model.pricing?.prompt === "0" && model.pricing?.completion === "0";
     const { error } = await supabase.from("ai_models").insert({
-      display_name: model.name, model_id: model.id, provider_id: aimlProvider.id,
+      display_name: model.name, model_id: model.id, provider_id: provider.id,
       description: model.description?.slice(0, 200) || null,
       is_active: true, is_free: isFree, context_window: model.context_length || null,
     });
     if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
     else { toast({ title: `Imported ${model.name}` }); fetchData(); }
-    setAimlImporting(prev => { const n = new Set(prev); n.delete(model.id); return n; });
+    setBrowseImporting(prev => { const n = new Set(prev); n.delete(model.id); return n; });
   };
+
+  const currentBrowsable = BROWSABLE_PROVIDERS.find(b => b.type === browseProviderType);
 
   // ── Date-filtered Ratings ─────────────────────────────────────────────────────
   const dateFilteredRatings = useMemo(() => {

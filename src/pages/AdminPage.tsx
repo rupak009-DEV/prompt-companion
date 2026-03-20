@@ -200,19 +200,13 @@ export default function AdminPage() {
   const [newModel, setNewModel] = useState({ display_name: "", model_id: "", provider_id: "", description: "", is_free: true });
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
 
-  // OpenRouter browser
+  // Generic model browser
   const [browseDialogOpen, setBrowseDialogOpen] = useState(false);
-  const [orModels, setOrModels] = useState<OpenRouterModel[]>([]);
-  const [orSearch, setOrSearch] = useState("");
-  const [orLoading, setOrLoading] = useState(false);
-  const [orImporting, setOrImporting] = useState<Set<string>>(new Set());
-
-  // AIML API browser
-  const [aimlBrowseOpen, setAimlBrowseOpen] = useState(false);
-  const [aimlModels, setAimlModels] = useState<OpenRouterModel[]>([]);
-  const [aimlSearch, setAimlSearch] = useState("");
-  const [aimlLoading, setAimlLoading] = useState(false);
-  const [aimlImporting, setAimlImporting] = useState<Set<string>>(new Set());
+  const [browseProviderType, setBrowseProviderType] = useState<string>("");
+  const [browseModels, setBrowseModels] = useState<OpenRouterModel[]>([]);
+  const [browseSearch, setBrowseSearch] = useState("");
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browseImporting, setBrowseImporting] = useState<Set<string>>(new Set());
 
   // System prompts
   const [systemPrompts, setSystemPrompts] = useState<Record<string, string>>({});

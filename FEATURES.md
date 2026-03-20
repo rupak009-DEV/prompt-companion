@@ -163,6 +163,11 @@ The admin panel is accessible only to users with the `admin` role (checked via `
   - Google Gemini
   - Lovable AI
   - AIML API
+  - Groq
+  - Mistral
+  - Bytez
+  - NVIDIA NIM
+  - refactored the model browser into a single generic system that dynamically shows "Browse" buttons for all active providers that support it: OpenRouter, AIML API, Groq, Mistral, Bytez, and NVIDIA NIM.
 - **API Key Configuration** — Securely store provider API keys (encrypted in database)
 - **Toggle Active/Inactive** — Enable or disable providers without deleting
 - **Delete Provider** — Remove a provider and its associated models
@@ -172,6 +177,7 @@ The admin panel is accessible only to users with the `admin` role (checked via `
 - **Add Model Manually** — Dialog to create a model with display name, model ID, provider, description, and free/paid flag
 - **Browse OpenRouter Models** — Search and import models from the OpenRouter catalog
 - **Browse AIML API Models** — Search and import models from the AIML API catalog
+- **Refactored  model browser** - it is into a single generic system that dynamically shows "Browse" buttons for all active providers that support it: OpenRouter, AIML API, Groq, Mistral, Bytez, and NVIDIA NIM. Then use rcan and import models from the catalog.
 - **Set Active Model** — Select which provider + model combination is used for enhancements
 - **Toggle Model Active/Inactive** — Enable or disable individual models
 - **Delete Model** — Remove a model from the database

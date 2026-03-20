@@ -59,6 +59,9 @@ const PROVIDER_PRESETS = [
   { name: "google", display_name: "Google Gemini", base_url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", type: "google" },
   { name: "lovable", display_name: "Lovable AI", base_url: "https://ai.gateway.lovable.dev/v1/chat/completions", type: "lovable" },
   { name: "aimlapi", display_name: "AIML API", base_url: "https://api.aimlapi.com/v1/chat/completions", type: "aimlapi" },
+  { name: "groq", display_name: "Groq", base_url: "https://api.groq.com/openai/v1/chat/completions", type: "groq" },
+  { name: "mistral", display_name: "Mistral", base_url: "https://api.mistral.ai/v1/chat/completions", type: "mistral" },
+  { name: "bytez", display_name: "Bytez", base_url: "https://api.bytez.com/v1/chat/completions", type: "bytez" },
 ];
 
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];

@@ -62,6 +62,66 @@ const PROVIDER_PRESETS = [
   { name: "groq", display_name: "Groq", base_url: "https://api.groq.com/openai/v1/chat/completions", type: "groq" },
   { name: "mistral", display_name: "Mistral", base_url: "https://api.mistral.ai/v1/chat/completions", type: "mistral" },
   { name: "bytez", display_name: "Bytez", base_url: "https://api.bytez.com/v1/chat/completions", type: "bytez" },
+  { name: "nvidia", display_name: "NVIDIA NIM", base_url: "https://integrate.api.nvidia.com/v1/chat/completions", type: "nvidia" },
+];
+
+type BrowsableProvider = { type: string; label: string; fetchUrl: string; needsAuth: boolean; parseModels: (data: any) => OpenRouterModel[] };
+
+const BROWSABLE_PROVIDERS: BrowsableProvider[] = [
+  {
+    type: "openrouter", label: "OpenRouter",
+    fetchUrl: "https://openrouter.ai/api/v1/models", needsAuth: false,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.name || m.id, description: m.description || "",
+      pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
+      context_length: m.context_length || 0,
+    })),
+  },
+  {
+    type: "aimlapi", label: "AIML API",
+    fetchUrl: "https://api.aimlapi.com/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || data || []).map((m: any) => ({
+      id: m.id || m.model_id || "", name: m.name || m.id || m.model_id || "",
+      description: m.description || "",
+      pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
+      context_length: m.context_length || m.max_context_length || 0,
+    })),
+  },
+  {
+    type: "groq", label: "Groq",
+    fetchUrl: "https://api.groq.com/openai/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.id, description: m.owned_by ? `Owned by ${m.owned_by}` : "",
+      pricing: { prompt: "0", completion: "0" }, context_length: m.context_window || 0,
+    })),
+  },
+  {
+    type: "mistral", label: "Mistral",
+    fetchUrl: "https://api.mistral.ai/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.id, description: m.description || (m.capabilities ? `Chat: ${m.capabilities.completion_chat}` : ""),
+      pricing: { prompt: "0", completion: "0" }, context_length: m.max_context_length || 0,
+    })),
+  },
+  {
+    type: "bytez", label: "Bytez",
+    fetchUrl: "https://api.bytez.com/models/v2/list/models?task=chat", needsAuth: true,
+    parseModels: (data) => (data.data || data.output || data || []).map((m: any) => ({
+      id: typeof m === "string" ? m : (m.id || m.model_id || m.name || ""),
+      name: typeof m === "string" ? m : (m.name || m.id || m.model_id || ""),
+      description: typeof m === "string" ? "" : (m.description || ""),
+      pricing: { prompt: "0", completion: "0" },
+      context_length: typeof m === "string" ? 0 : (m.context_length || 0),
+    })),
+  },
+  {
+    type: "nvidia", label: "NVIDIA NIM",
+    fetchUrl: "https://integrate.api.nvidia.com/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.id, description: m.owned_by ? `By ${m.owned_by}` : "",
+      pricing: { prompt: "0", completion: "0" }, context_length: m.max_model_len || 0,
+    })),
+  },
 ];
 
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
@@ -140,19 +200,13 @@ export default function AdminPage() {
   const [newModel, setNewModel] = useState({ display_name: "", model_id: "", provider_id: "", description: "", is_free: true });
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
 
-  // OpenRouter browser
+  // Generic model browser
   const [browseDialogOpen, setBrowseDialogOpen] = useState(false);
-  const [orModels, setOrModels] = useState<OpenRouterModel[]>([]);
-  const [orSearch, setOrSearch] = useState("");
-  const [orLoading, setOrLoading] = useState(false);
-  const [orImporting, setOrImporting] = useState<Set<string>>(new Set());
-
-  // AIML API browser
-  const [aimlBrowseOpen, setAimlBrowseOpen] = useState(false);
-  const [aimlModels, setAimlModels] = useState<OpenRouterModel[]>([]);
-  const [aimlSearch, setAimlSearch] = useState("");
-  const [aimlLoading, setAimlLoading] = useState(false);
-  const [aimlImporting, setAimlImporting] = useState<Set<string>>(new Set());
+  const [browseProviderType, setBrowseProviderType] = useState<string>("");
+  const [browseModels, setBrowseModels] = useState<OpenRouterModel[]>([]);
+  const [browseSearch, setBrowseSearch] = useState("");
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browseImporting, setBrowseImporting] = useState<Set<string>>(new Set());
 
   // System prompts
   const [systemPrompts, setSystemPrompts] = useState<Record<string, string>>({});
@@ -343,88 +397,63 @@ export default function AdminPage() {
     setActiveModel(value); toast({ title: "Active model updated" }); setSaving(false);
   };
 
-  // ── OpenRouter browser ───────────────────────────────────────────────────────
-  const openRouterProvider = providers.find(p => p.provider_type === "openrouter" && p.is_active);
-
-  const fetchOpenRouterModels = async () => {
-    setOrLoading(true);
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/models");
-      const data = await res.json();
-      setOrModels(data.data || []);
-    } catch { toast({ title: "Failed to fetch OpenRouter models", variant: "destructive" }); }
-    setOrLoading(false);
-  };
-
-  const handleOpenBrowse = () => { setBrowseDialogOpen(true); if (orModels.length === 0) fetchOpenRouterModels(); };
-
-  const filteredOrModels = useMemo(() => {
-    if (!orSearch.trim()) return orModels.slice(0, 50);
-    const q = orSearch.toLowerCase();
-    return orModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 50);
-  }, [orModels, orSearch]);
-
+  // ── Generic model browser ──────────────────────────────────────────────────
   const existingModelIds = useMemo(() => new Set(models.map(m => m.model_id)), [models]);
 
-  const importOrModel = async (orModel: OpenRouterModel) => {
-    if (!openRouterProvider) return;
-    setOrImporting(prev => new Set(prev).add(orModel.id));
-    const isFree = orModel.pricing?.prompt === "0" && orModel.pricing?.completion === "0";
-    const { error } = await supabase.from("ai_models").insert({
-      display_name: orModel.name, model_id: orModel.id, provider_id: openRouterProvider.id,
-      description: orModel.description?.slice(0, 200) || null,
-      is_active: true, is_free: isFree, context_window: orModel.context_length || null,
-    });
-    if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
-    else { toast({ title: `Imported ${orModel.name}` }); fetchData(); }
-    setOrImporting(prev => { const n = new Set(prev); n.delete(orModel.id); return n; });
-  };
+  const activeBrowsable = useMemo(() =>
+    BROWSABLE_PROVIDERS.filter(bp => providers.some(p => p.provider_type === bp.type && p.is_active)),
+    [providers]
+  );
 
-  // ── AIML API browser ────────────────────────────────────────────────────────
-  const aimlProvider = providers.find(p => p.provider_type === "aimlapi" && p.is_active);
-
-  const fetchAimlModels = async () => {
-    setAimlLoading(true);
+  const fetchBrowseModels = async (providerType: string) => {
+    const bp = BROWSABLE_PROVIDERS.find(b => b.type === providerType);
+    if (!bp) return;
+    setBrowseLoading(true);
     try {
-      const res = await fetch("https://api.aimlapi.com/v1/models", {
-        headers: aimlProvider?.api_key_encrypted ? { Authorization: `Bearer ${aimlProvider.api_key_encrypted}` } : {},
-      });
+      const provider = providers.find(p => p.provider_type === providerType && p.is_active);
+      const headers: Record<string, string> = {};
+      if (bp.needsAuth && provider?.api_key_encrypted) {
+        headers["Authorization"] = `Bearer ${provider.api_key_encrypted}`;
+      }
+      const res = await fetch(bp.fetchUrl, { headers });
       const data = await res.json();
-      const modelList = (data.data || data || []).map((m: any) => ({
-        id: m.id || m.model_id || "",
-        name: m.name || m.id || m.model_id || "",
-        description: m.description || "",
-        pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
-        context_length: m.context_length || m.max_context_length || 0,
-      }));
-      setAimlModels(modelList);
+      setBrowseModels(bp.parseModels(data));
     } catch {
-      toast({ title: "Failed to fetch AIML API models", variant: "destructive" });
+      toast({ title: `Failed to fetch ${bp.label} models`, variant: "destructive" });
     }
-    setAimlLoading(false);
+    setBrowseLoading(false);
   };
 
-  const handleOpenAimlBrowse = () => { setAimlBrowseOpen(true); if (aimlModels.length === 0) fetchAimlModels(); };
+  const handleOpenBrowse = (providerType: string) => {
+    setBrowseProviderType(providerType);
+    setBrowseModels([]);
+    setBrowseSearch("");
+    setBrowseDialogOpen(true);
+    fetchBrowseModels(providerType);
+  };
 
-  const filteredAimlModels = useMemo(() => {
-    if (!aimlSearch.trim()) return aimlModels.slice(0, 100);
-    const q = aimlSearch.toLowerCase();
-    return aimlModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 100);
-  }, [aimlModels, aimlSearch]);
+  const filteredBrowseModels = useMemo(() => {
+    if (!browseSearch.trim()) return browseModels.slice(0, 100);
+    const q = browseSearch.toLowerCase();
+    return browseModels.filter(m => m.id.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)).slice(0, 100);
+  }, [browseModels, browseSearch]);
 
-  const importAimlModel = async (model: OpenRouterModel) => {
-    if (!aimlProvider) return;
-    setAimlImporting(prev => new Set(prev).add(model.id));
+  const importBrowseModel = async (model: OpenRouterModel) => {
+    const provider = providers.find(p => p.provider_type === browseProviderType && p.is_active);
+    if (!provider) return;
+    setBrowseImporting(prev => new Set(prev).add(model.id));
     const isFree = model.pricing?.prompt === "0" && model.pricing?.completion === "0";
     const { error } = await supabase.from("ai_models").insert({
-      display_name: model.name, model_id: model.id, provider_id: aimlProvider.id,
+      display_name: model.name, model_id: model.id, provider_id: provider.id,
       description: model.description?.slice(0, 200) || null,
       is_active: true, is_free: isFree, context_window: model.context_length || null,
     });
     if (error) toast({ title: "Error importing", description: error.message, variant: "destructive" });
     else { toast({ title: `Imported ${model.name}` }); fetchData(); }
-    setAimlImporting(prev => { const n = new Set(prev); n.delete(model.id); return n; });
+    setBrowseImporting(prev => { const n = new Set(prev); n.delete(model.id); return n; });
   };
+
+  const currentBrowsable = BROWSABLE_PROVIDERS.find(b => b.type === browseProviderType);
 
   // ── Date-filtered Ratings ─────────────────────────────────────────────────────
   const dateFilteredRatings = useMemo(() => {
@@ -813,17 +842,12 @@ export default function AdminPage() {
             <TabsContent value="models" className="space-y-4 mt-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">Add models and select which one to use</p>
-                <div className="flex items-center gap-2">
-                  {openRouterProvider && (
-                    <Button size="sm" variant="outline" onClick={handleOpenBrowse}>
-                      <Search className="h-4 w-4 mr-1" /> Browse OpenRouter
+                <div className="flex items-center gap-2 flex-wrap">
+                  {activeBrowsable.map(bp => (
+                    <Button key={bp.type} size="sm" variant="outline" onClick={() => handleOpenBrowse(bp.type)}>
+                      <Search className="h-4 w-4 mr-1" /> Browse {bp.label}
                     </Button>
-                  )}
-                  {aimlProvider && (
-                    <Button size="sm" variant="outline" onClick={handleOpenAimlBrowse}>
-                      <Search className="h-4 w-4 mr-1" /> Browse AIML API
-                    </Button>
-                  )}
+                  ))}
                   <Dialog open={modelDialogOpen} onOpenChange={setModelDialogOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm" disabled={providers.length === 0}><Plus className="h-4 w-4 mr-1" /> Add Model</Button>
@@ -1367,75 +1391,35 @@ export default function AdminPage() {
           </Tabs>
         )}
 
-        {/* ── OpenRouter Browser Dialog ──────────────────────────────────────────── */}
+        {/* ── Generic Model Browser Dialog ──────────────────────────────────────── */}
         <Dialog open={browseDialogOpen} onOpenChange={setBrowseDialogOpen}>
           <DialogContent className="max-w-2xl h-[80vh] flex flex-col overflow-hidden">
-            <DialogHeader><DialogTitle>Browse OpenRouter Models</DialogTitle></DialogHeader>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search models..." value={orSearch} onChange={(e) => setOrSearch(e.target.value)} className="pl-9" />
-            </div>
-            {orLoading ? (
-              <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : (
-              <ScrollArea className="flex-1 max-h-[55vh]">
-                <div className="space-y-2 pr-4">
-                  {filteredOrModels.length === 0 && <p className="text-center text-muted-foreground py-8">No models found</p>}
-                  {filteredOrModels.map(m => {
-                    const alreadyAdded = existingModelIds.has(m.id);
-                    const isImporting = orImporting.has(m.id);
-                    const isFree = m.pricing?.prompt === "0" && m.pricing?.completion === "0";
-                    return (
-                      <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                        <div className="flex-1 min-w-0 mr-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{m.name}</span>
-                            {isFree && <Badge variant="outline" className="text-xs shrink-0">Free</Badge>}
-                          </div>
-                          <p className="text-xs text-muted-foreground font-mono truncate">{m.id}</p>
-                          {m.context_length > 0 && <p className="text-xs text-muted-foreground">{(m.context_length / 1000).toFixed(0)}K context</p>}
-                        </div>
-                        <Button size="sm" variant={alreadyAdded ? "secondary" : "default"} disabled={alreadyAdded || isImporting} onClick={() => importOrModel(m)} className="shrink-0">
-                          {isImporting ? <Loader2 className="h-3 w-3 animate-spin" /> : alreadyAdded ? <><Check className="h-3 w-3 mr-1" />Added</> : <><Download className="h-3 w-3 mr-1" />Add</>}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* ── AIML API Browser Dialog ────────────────────────────────────────────── */}
-        <Dialog open={aimlBrowseOpen} onOpenChange={setAimlBrowseOpen}>
-          <DialogContent className="max-w-2xl h-[80vh] flex flex-col overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Browse AIML API Models</DialogTitle>
-              <p className="text-sm text-muted-foreground">Browse and import available models from aimlapi.com</p>
+              <DialogTitle>Browse {currentBrowsable?.label || ""} Models</DialogTitle>
+              <p className="text-sm text-muted-foreground">Search and import models from {currentBrowsable?.label}</p>
             </DialogHeader>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search models..." value={aimlSearch} onChange={(e) => setAimlSearch(e.target.value)} className="pl-9" />
+                <Input placeholder="Search models..." value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} className="pl-9" />
               </div>
-              <Button size="sm" variant="outline" onClick={fetchAimlModels} disabled={aimlLoading}>
-                <RefreshCw className={`h-4 w-4 ${aimlLoading ? "animate-spin" : ""}`} />
+              <Button size="sm" variant="outline" onClick={() => fetchBrowseModels(browseProviderType)} disabled={browseLoading}>
+                <RefreshCw className={`h-4 w-4 ${browseLoading ? "animate-spin" : ""}`} />
               </Button>
             </div>
             <div className="text-xs text-muted-foreground">
-              {aimlModels.length > 0 && `${aimlModels.length} models available`}
-              {aimlSearch && filteredAimlModels.length !== aimlModels.length && ` · ${filteredAimlModels.length} matching`}
+              {browseModels.length > 0 && `${browseModels.length} models available`}
+              {browseSearch && filteredBrowseModels.length !== browseModels.length && ` · ${filteredBrowseModels.length} matching`}
             </div>
-            {aimlLoading ? (
+            {browseLoading ? (
               <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : (
               <ScrollArea className="flex-1 max-h-[55vh]">
                 <div className="space-y-2 pr-4">
-                  {filteredAimlModels.length === 0 && <p className="text-center text-muted-foreground py-8">No models found</p>}
-                  {filteredAimlModels.map(m => {
+                  {filteredBrowseModels.length === 0 && <p className="text-center text-muted-foreground py-8">No models found</p>}
+                  {filteredBrowseModels.map(m => {
                     const alreadyAdded = existingModelIds.has(m.id);
-                    const isImporting = aimlImporting.has(m.id);
+                    const isImporting = browseImporting.has(m.id);
                     const isFree = m.pricing?.prompt === "0" && m.pricing?.completion === "0";
                     return (
                       <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
@@ -1448,7 +1432,7 @@ export default function AdminPage() {
                           {m.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{m.description}</p>}
                           {m.context_length > 0 && <p className="text-[10px] text-muted-foreground">{(m.context_length / 1000).toFixed(0)}K context</p>}
                         </div>
-                        <Button size="sm" variant={alreadyAdded ? "secondary" : "default"} disabled={alreadyAdded || isImporting} onClick={() => importAimlModel(m)} className="shrink-0">
+                        <Button size="sm" variant={alreadyAdded ? "secondary" : "default"} disabled={alreadyAdded || isImporting} onClick={() => importBrowseModel(m)} className="shrink-0">
                           {isImporting ? <Loader2 className="h-3 w-3 animate-spin" /> : alreadyAdded ? <><Check className="h-3 w-3 mr-1" />Added</> : <><Download className="h-3 w-3 mr-1" />Add</>}
                         </Button>
                       </div>

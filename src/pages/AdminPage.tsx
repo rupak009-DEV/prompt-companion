@@ -62,6 +62,66 @@ const PROVIDER_PRESETS = [
   { name: "groq", display_name: "Groq", base_url: "https://api.groq.com/openai/v1/chat/completions", type: "groq" },
   { name: "mistral", display_name: "Mistral", base_url: "https://api.mistral.ai/v1/chat/completions", type: "mistral" },
   { name: "bytez", display_name: "Bytez", base_url: "https://api.bytez.com/v1/chat/completions", type: "bytez" },
+  { name: "nvidia", display_name: "NVIDIA NIM", base_url: "https://integrate.api.nvidia.com/v1/chat/completions", type: "nvidia" },
+];
+
+type BrowsableProvider = { type: string; label: string; fetchUrl: string; needsAuth: boolean; parseModels: (data: any) => OpenRouterModel[] };
+
+const BROWSABLE_PROVIDERS: BrowsableProvider[] = [
+  {
+    type: "openrouter", label: "OpenRouter",
+    fetchUrl: "https://openrouter.ai/api/v1/models", needsAuth: false,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.name || m.id, description: m.description || "",
+      pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
+      context_length: m.context_length || 0,
+    })),
+  },
+  {
+    type: "aimlapi", label: "AIML API",
+    fetchUrl: "https://api.aimlapi.com/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || data || []).map((m: any) => ({
+      id: m.id || m.model_id || "", name: m.name || m.id || m.model_id || "",
+      description: m.description || "",
+      pricing: { prompt: m.pricing?.prompt || "0", completion: m.pricing?.completion || "0" },
+      context_length: m.context_length || m.max_context_length || 0,
+    })),
+  },
+  {
+    type: "groq", label: "Groq",
+    fetchUrl: "https://api.groq.com/openai/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.id, description: m.owned_by ? `Owned by ${m.owned_by}` : "",
+      pricing: { prompt: "0", completion: "0" }, context_length: m.context_window || 0,
+    })),
+  },
+  {
+    type: "mistral", label: "Mistral",
+    fetchUrl: "https://api.mistral.ai/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.id, description: m.description || (m.capabilities ? `Chat: ${m.capabilities.completion_chat}` : ""),
+      pricing: { prompt: "0", completion: "0" }, context_length: m.max_context_length || 0,
+    })),
+  },
+  {
+    type: "bytez", label: "Bytez",
+    fetchUrl: "https://api.bytez.com/models/v2/list/models?task=chat", needsAuth: true,
+    parseModels: (data) => (data.data || data.output || data || []).map((m: any) => ({
+      id: typeof m === "string" ? m : (m.id || m.model_id || m.name || ""),
+      name: typeof m === "string" ? m : (m.name || m.id || m.model_id || ""),
+      description: typeof m === "string" ? "" : (m.description || ""),
+      pricing: { prompt: "0", completion: "0" },
+      context_length: typeof m === "string" ? 0 : (m.context_length || 0),
+    })),
+  },
+  {
+    type: "nvidia", label: "NVIDIA NIM",
+    fetchUrl: "https://integrate.api.nvidia.com/v1/models", needsAuth: true,
+    parseModels: (data) => (data.data || []).map((m: any) => ({
+      id: m.id, name: m.id, description: m.owned_by ? `By ${m.owned_by}` : "",
+      pricing: { prompt: "0", completion: "0" }, context_length: m.max_model_len || 0,
+    })),
+  },
 ];
 
 const CHART_COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];

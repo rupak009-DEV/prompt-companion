@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Enhancer",
+  "version": "1.0.0",
+  "description": "Enhance your AI prompts directly on ChatGPT, Gemini, and more. Quick, Assisted, and Wizard modes.",
+  "permissions": ["sidePanel", "activeTab", "storage", "tabs"],
+  "action": {
+    "default_icon": "icon48.png",
+    "default_title": "Prompt Enhancer"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "js": ["content-chatgpt.js"],
+      "css": ["content-shared.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["content-gemini.js"],
+      "css": ["content-shared.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

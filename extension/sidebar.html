@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Enhancer</title>
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+  <!-- Login View -->
+  <div id="login-view" class="view">
+    <div class="logo-section">
+      <img src="icon128.png" alt="Prompt Enhancer" class="logo" />
+      <h1>Prompt Enhancer</h1>
+      <p class="subtitle">Sign in with your account</p>
+    </div>
+    <form id="login-form" class="form">
+      <input type="email" id="login-email" placeholder="Email" required />
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+      <p id="login-error" class="error"></p>
+    </form>
+  </div>
+
+  <!-- Main View -->
+  <div id="main-view" class="view hidden">
+    <div class="header">
+      <div class="header-left">
+        <img src="icon48.png" alt="" class="header-icon" />
+        <span class="header-title">Prompt Enhancer</span>
+      </div>
+      <button id="logout-btn" class="btn-icon" title="Sign out">⏻</button>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-mode="quick">⚡ Quick</button>
+      <button class="tab" data-mode="assisted">🔍 Assisted</button>
+      <button class="tab" data-mode="wizard">📖 Wizard</button>
+    </div>
+
+    <!-- Quick Mode -->
+    <div id="panel-quick" class="panel">
+      <label>Your Prompt</label>
+      <textarea id="quick-input" placeholder="Type or paste your prompt..." rows="5"></textarea>
+      <div class="btn-row">
+        <button id="quick-enhance" class="btn btn-primary">✨ Enhance</button>
+        <button id="quick-clear" class="btn btn-ghost">Clear</button>
+      </div>
+      <div id="quick-output-section" class="output-section hidden">
+        <label>Enhanced Prompt</label>
+        <div id="quick-output" class="output-box"></div>
+        <div class="btn-row">
+          <button id="quick-push" class="btn btn-secondary">⬆ Push to Page</button>
+          <button id="quick-copy" class="btn btn-ghost">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard Mode -->
+    <div id="panel-wizard" class="panel hidden">
+      <label>Your Prompt</label>
+      <textarea id="wizard-input" placeholder="Type or paste your prompt..." rows="4"></textarea>
+      <div class="wizard-fields">
+        <label>Intent / Goal</label>
+        <input type="text" id="wiz-intent" placeholder="What do you want to achieve?" />
+        <label>Target Audience</label>
+        <input type="text" id="wiz-audience" placeholder="Who is this for?" />
+        <label>Tone</label>
+        <input type="text" id="wiz-tone" placeholder="Professional, casual, etc." />
+        <label>Format</label>
+        <input type="text" id="wiz-format" placeholder="Essay, list, code, etc." />
+        <label>Constraints</label>
+        <input type="text" id="wiz-constraints" placeholder="Any limits or requirements?" />
+      </div>
+      <div class="btn-row">
+        <button id="wizard-enhance" class="btn btn-primary">✨ Enhance</button>
+        <button id="wizard-clear" class="btn btn-ghost">Clear</button>
+      </div>
+      <div id="wizard-output-section" class="output-section hidden">
+        <label>Enhanced Prompt</label>
+        <div id="wizard-output" class="output-box"></div>
+        <div class="btn-row">
+          <button id="wizard-push" class="btn btn-secondary">⬆ Push to Page</button>
+          <button id="wizard-copy" class="btn btn-ghost">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assisted Mode -->
+    <div id="panel-assisted" class="panel hidden">
+      <label>Your Prompt</label>
+      <textarea id="assisted-input" placeholder="Type or paste your prompt..." rows="4"></textarea>
+      <button id="assisted-start" class="btn btn-primary">🔍 Analyze & Ask Questions</button>
+      <div id="assisted-questions" class="questions-section hidden"></div>
+      <div id="assisted-enhance-section" class="hidden">
+        <button id="assisted-enhance" class="btn btn-primary">✨ Generate Enhanced Prompt</button>
+      </div>
+      <div id="assisted-output-section" class="output-section hidden">
+        <label>Enhanced Prompt</label>
+        <div id="assisted-output" class="output-box"></div>
+        <div class="btn-row">
+          <button id="assisted-push" class="btn btn-secondary">⬆ Push to Page</button>
+          <button id="assisted-copy" class="btn btn-ghost">📋 Copy</button>
+        </div>
+      </div>
+      <button id="assisted-clear" class="btn btn-ghost" style="margin-top:8px">Clear</button>
+    </div>
+
+    <div id="status-bar" class="status-bar hidden"></div>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

@@ -9,7 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { 
   Wand2, ArrowRight, Check, Target, Search, Zap, 
   User, Link2, BookTemplate, Globe, PenTool, Code,
-  Smartphone, Chrome, Facebook, Instagram, Youtube, Share2, Mail
+  Smartphone, Chrome, Facebook, Instagram, Youtube, Share2, Mail, Download
 } from "lucide-react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
@@ -317,12 +317,35 @@ export default function LandingPage() {
                   <Chrome className="h-6 w-6 text-cyan-400" />
                 </div>
                 <h3 className="font-semibold text-lg mb-2 text-landing-text">{t("browserExt")}</h3>
-                <p className="text-xs text-fuchsia-400 mb-4">{t("comingSoon")}</p>
+                <p className="text-xs text-cyan-400 font-medium mb-4">Available Now</p>
                 <div className="flex flex-wrap justify-center gap-2 mt-auto">
-                  <Button size="sm" className="text-xs bg-cyan-600 hover:bg-cyan-500 text-primary-foreground border-0">{t("chromeStore")}</Button>
-                  <Button size="sm" className="text-xs bg-cyan-600 hover:bg-cyan-500 text-primary-foreground border-0">{t("firefoxAddons")}</Button>
-                  <Button size="sm" className="text-xs bg-cyan-600 hover:bg-cyan-500 text-primary-foreground border-0">{t("otherBrowsers")}</Button>
+                  <Button
+                    size="sm"
+                    className="text-xs bg-gradient-to-r from-cyan-600 to-violet-600 hover:from-cyan-500 hover:to-violet-500 text-primary-foreground border-0 gap-1.5"
+                    onClick={() => {
+                      fetch("/prompt-enhancer-extension.zip")
+                        .then((res) => {
+                          if (!res.ok) throw new Error("Download failed");
+                          return res.blob();
+                        })
+                        .then((blob) => {
+                          const a = document.createElement("a");
+                          a.href = URL.createObjectURL(blob);
+                          a.download = "prompt-enhancer-extension.zip";
+                          a.click();
+                          URL.revokeObjectURL(a.href);
+                        })
+                        .catch(() => alert("Download failed. Please try again."));
+                    }}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Chrome Extension
+                  </Button>
                 </div>
+                <p className="text-[10px] text-landing-text-muted mt-3 text-center leading-relaxed">
+                  Works on Chrome, Edge, Brave & Arc.<br />
+                  Unzip → chrome://extensions → Load unpacked
+                </p>
               </Card>
             </ScrollReveal>
           </div>

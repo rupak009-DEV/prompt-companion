@@ -1,0 +1,46 @@
+/* Prompt Enhancer injected buttons */
+.pe-btn-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.4;
+}
+.pe-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.pe-btn:active { transform: translateY(0); }
+
+.pe-btn--quick {
+  background: linear-gradient(135deg, #7c3aed, #c026d3);
+  color: #fff;
+}
+.pe-btn--assisted {
+  background: linear-gradient(135deg, #0891b2, #6366f1);
+  color: #fff;
+}
+.pe-btn--wizard {
+  background: linear-gradient(135deg, #d946ef, #f43f5e);
+  color: #fff;
+}
+.pe-btn--loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.pe-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}

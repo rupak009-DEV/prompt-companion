@@ -1,0 +1,150 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f0f14;
+  color: #e4e4eb;
+  width: 100%;
+  min-height: 100vh;
+  font-size: 13px;
+}
+.hidden { display: none !important; }
+.view { padding: 16px; }
+
+/* Login */
+.logo-section { text-align: center; margin-bottom: 20px; padding-top: 32px; }
+.logo { width: 64px; height: 64px; border-radius: 16px; margin-bottom: 12px; }
+.logo-section h1 { font-size: 20px; font-weight: 700; }
+.subtitle { color: #888; font-size: 12px; margin-top: 4px; }
+.form { display: flex; flex-direction: column; gap: 10px; }
+.form input {
+  background: #1a1a24;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #e4e4eb;
+  font-size: 13px;
+  outline: none;
+}
+.form input:focus { border-color: #7c3aed; }
+.error { color: #f43f5e; font-size: 11px; margin-top: 4px; }
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #1e1e2e;
+  margin-bottom: 12px;
+}
+.header-left { display: flex; align-items: center; gap: 8px; }
+.header-icon { width: 24px; height: 24px; border-radius: 6px; }
+.header-title { font-weight: 700; font-size: 14px; }
+.btn-icon {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+.btn-icon:hover { color: #e4e4eb; }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; margin-bottom: 14px; background: #1a1a24; border-radius: 10px; padding: 3px; }
+.tab {
+  flex: 1;
+  padding: 7px 4px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.tab.active { background: #7c3aed; color: #fff; }
+.tab:hover:not(.active) { color: #e4e4eb; }
+
+/* Panels */
+.panel { display: flex; flex-direction: column; gap: 10px; }
+label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+textarea, .panel input[type="text"] {
+  background: #1a1a24;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 10px;
+  color: #e4e4eb;
+  font-size: 13px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  resize: vertical;
+  outline: none;
+}
+textarea:focus, .panel input[type="text"]:focus { border-color: #7c3aed; }
+
+/* Buttons */
+.btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: linear-gradient(135deg, #7c3aed, #c026d3); color: #fff; }
+.btn-secondary { background: #2a2a3a; color: #e4e4eb; }
+.btn-ghost { background: transparent; color: #888; border: 1px solid #2a2a3a; }
+.btn-ghost:hover { color: #e4e4eb; }
+.btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Output */
+.output-section { margin-top: 10px; }
+.output-box {
+  background: #1a1a24;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  line-height: 1.6;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+}
+
+/* Wizard fields */
+.wizard-fields { display: flex; flex-direction: column; gap: 6px; }
+.wizard-fields label { margin-top: 4px; }
+
+/* Questions */
+.questions-section { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.question-block { display: flex; flex-direction: column; gap: 4px; }
+.question-block p { font-size: 12px; font-weight: 600; color: #e4e4eb; }
+.question-block input, .question-block select {
+  background: #1a1a24;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e4e4eb;
+  font-size: 13px;
+  outline: none;
+}
+
+/* Status bar */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 16px;
+  background: #1a1a24;
+  border-top: 1px solid #2a2a3a;
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+}

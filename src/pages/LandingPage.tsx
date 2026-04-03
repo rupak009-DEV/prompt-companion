@@ -9,7 +9,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { 
   Wand2, ArrowRight, Check, Target, Search, Zap, 
   User, Link2, BookTemplate, Globe, PenTool, Code,
-  Smartphone, Chrome, Facebook, Instagram, Youtube, Share2, Mail
+  Smartphone, Chrome, Facebook, Instagram, Youtube, Share2, Mail, Download
 } from "lucide-react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import { useI18n } from "@/lib/i18n";

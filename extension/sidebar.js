@@ -191,6 +191,11 @@ $("#quick-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#quick-output").textContent);
   showStatus("📋 Copied!");
 });
+$("#quick-json").addEventListener("click", () => convertToJson("quick"));
+$("#quick-json-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#quick-json-output").textContent);
+  showStatus("📋 JSON Copied!");
+});
 
 // ─── Wizard Mode ─────────────────────────────────────────────────────────────
 $("#wizard-enhance").addEventListener("click", async () => {

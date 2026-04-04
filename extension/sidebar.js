@@ -244,6 +244,7 @@ $("#wizard-json-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#wizard-json-output").textContent);
   showStatus("📋 JSON Copied!");
 });
+$("#wizard-json-push").addEventListener("click", () => pushToPage($("#wizard-json-output").textContent));
 
 // ─── Assisted Mode ───────────────────────────────────────────────────────────
 let assistedAnswers = {};

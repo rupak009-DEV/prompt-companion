@@ -191,6 +191,11 @@ $("#quick-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#quick-output").textContent);
   showStatus("📋 Copied!");
 });
+$("#quick-json").addEventListener("click", () => convertToJson("quick"));
+$("#quick-json-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#quick-json-output").textContent);
+  showStatus("📋 JSON Copied!");
+});
 
 // ─── Wizard Mode ─────────────────────────────────────────────────────────────
 $("#wizard-enhance").addEventListener("click", async () => {
@@ -232,6 +237,11 @@ $("#wizard-push").addEventListener("click", () => pushToPage($("#wizard-output")
 $("#wizard-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#wizard-output").textContent);
   showStatus("📋 Copied!");
+});
+$("#wizard-json").addEventListener("click", () => convertToJson("wizard"));
+$("#wizard-json-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#wizard-json-output").textContent);
+  showStatus("📋 JSON Copied!");
 });
 
 // ─── Assisted Mode ───────────────────────────────────────────────────────────
@@ -331,6 +341,56 @@ $("#assisted-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#assisted-output").textContent);
   showStatus("📋 Copied!");
 });
+$("#assisted-json").addEventListener("click", () => convertToJson("assisted"));
+$("#assisted-json-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#assisted-json-output").textContent);
+  showStatus("📋 JSON Copied!");
+});
+
+// ─── JSON Conversion ─────────────────────────────────────────────────────────
+function convertToJson(mode) {
+  const outputEl = $(`#${mode}-output`);
+  const jsonSection = $(`#${mode}-json-section`);
+  const jsonOutput = $(`#${mode}-json-output`);
+  const text = outputEl?.textContent?.trim();
+  if (!text) { showStatus("❌ No enhanced prompt to convert"); return; }
+
+  const lines = text.split("\n").filter(l => l.trim());
+  const jsonObj = {
+    prompt: text,
+    sections: [],
+    metadata: {
+      mode: mode,
+      convertedAt: new Date().toISOString(),
+      lineCount: lines.length,
+      wordCount: text.split(/\s+/).length
+    }
+  };
+
+  // Parse sections from the prompt text
+  let currentSection = null;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Detect headers (lines starting with #, **, or all caps short lines)
+    if (/^#{1,3}\s/.test(trimmed) || /^\*\*[^*]+\*\*$/.test(trimmed) || 
+        (trimmed.length < 60 && trimmed === trimmed.toUpperCase() && trimmed.length > 3)) {
+      if (currentSection) jsonObj.sections.push(currentSection);
+      currentSection = { heading: trimmed.replace(/^#+\s*/, "").replace(/\*\*/g, ""), content: [] };
+    } else if (currentSection) {
+      currentSection.content.push(trimmed);
+    } else {
+      if (!jsonObj.sections.length) {
+        currentSection = { heading: "Main", content: [trimmed] };
+      }
+    }
+  }
+  if (currentSection) jsonObj.sections.push(currentSection);
+
+  const formatted = JSON.stringify(jsonObj, null, 2);
+  jsonOutput.textContent = formatted;
+  jsonSection.classList.remove("hidden");
+  showStatus("✅ Converted to JSON");
+}
 
 // ─── Check for pending prompt from content script ────────────────────────────
 async function checkPending() {

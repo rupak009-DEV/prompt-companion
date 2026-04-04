@@ -148,3 +148,18 @@ textarea:focus, .panel input[type="text"]:focus { border-color: #7c3aed; }
   color: #888;
   text-align: center;
 }
+.json-section { margin-top: 8px; }
+.json-box {
+  background: #12121a;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 11px;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  color: #a5f3fc;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 250px;
+  overflow-y: auto;
+  margin-bottom: 6px;
+}

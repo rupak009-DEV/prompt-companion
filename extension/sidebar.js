@@ -397,10 +397,12 @@ function convertToJson(mode) {
 
 // ─── Check for pending prompt from content script ────────────────────────────
 async function checkPending() {
-  const data = await chrome.storage.local.get(["pendingPrompt", "pendingMode", "pendingTabId"]);
+  const data = await chrome.storage.local.get(["pendingPrompt", "pendingMode", "pendingTabId", "pendingAutoEnhance"]);
   if (data.pendingPrompt) {
     pendingTabId = data.pendingTabId || null;
     const mode = data.pendingMode || "quick";
+    const autoEnhance = !!data.pendingAutoEnhance;
+
     // Switch to the right tab
     document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
     document.querySelector(`.tab[data-mode="${mode}"]`).classList.add("active");
@@ -411,14 +413,23 @@ async function checkPending() {
     // Fill prompt
     if (mode === "quick") {
       $("#quick-input").value = data.pendingPrompt;
+      if (autoEnhance) {
+        setTimeout(() => $("#quick-enhance").click(), 300);
+      }
     } else if (mode === "wizard") {
       $("#wizard-input").value = data.pendingPrompt;
+      if (autoEnhance) {
+        setTimeout(() => $("#wizard-enhance").click(), 300);
+      }
     } else if (mode === "assisted") {
       $("#assisted-input").value = data.pendingPrompt;
+      if (autoEnhance) {
+        setTimeout(() => $("#assisted-start").click(), 300);
+      }
     }
 
     // Clear pending
-    await chrome.storage.local.remove(["pendingPrompt", "pendingMode", "pendingTabId"]);
+    await chrome.storage.local.remove(["pendingPrompt", "pendingMode", "pendingTabId", "pendingAutoEnhance"]);
   }
 }
 

@@ -238,6 +238,11 @@ $("#wizard-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#wizard-output").textContent);
   showStatus("📋 Copied!");
 });
+$("#wizard-json").addEventListener("click", () => convertToJson("wizard"));
+$("#wizard-json-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#wizard-json-output").textContent);
+  showStatus("📋 JSON Copied!");
+});
 
 // ─── Assisted Mode ───────────────────────────────────────────────────────────
 let assistedAnswers = {};

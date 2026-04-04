@@ -341,6 +341,11 @@ $("#assisted-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#assisted-output").textContent);
   showStatus("📋 Copied!");
 });
+$("#assisted-json").addEventListener("click", () => convertToJson("assisted"));
+$("#assisted-json-copy").addEventListener("click", () => {
+  navigator.clipboard.writeText($("#assisted-json-output").textContent);
+  showStatus("📋 JSON Copied!");
+});
 
 // ─── Check for pending prompt from content script ────────────────────────────
 async function checkPending() {

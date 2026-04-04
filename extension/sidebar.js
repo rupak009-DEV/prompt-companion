@@ -196,6 +196,7 @@ $("#quick-json-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#quick-json-output").textContent);
   showStatus("📋 JSON Copied!");
 });
+$("#quick-json-push").addEventListener("click", () => pushToPage($("#quick-json-output").textContent));
 
 // ─── Wizard Mode ─────────────────────────────────────────────────────────────
 $("#wizard-enhance").addEventListener("click", async () => {

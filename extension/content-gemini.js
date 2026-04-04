@@ -1,15 +1,17 @@
 // Content script for Gemini (gemini.google.com)
 (function () {
-  const ICON_WAND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 4-1.4 1.4M5.5 18.5 18 6l-1-1L4.5 17.5l1 1z"/><path d="m14.5 6.5 3 3"/></svg>`;
+  const ICON_WAND = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4-1.4 1.4M5.5 18.5 18 6l-1-1L4.5 17.5l1 1z"/><path d="m14.5 6.5 3 3"/></svg>`;
 
-  let injected = false;
+  let btnRowRef = null;
 
   function getInputEl() {
-    // Gemini uses a rich text editor (contenteditable or a specific element)
-    return document.querySelector('.ql-editor[contenteditable="true"]') ||
-           document.querySelector('div[contenteditable="true"][aria-label]') ||
-           document.querySelector('.text-input-field_textarea-wrapper textarea') ||
+    // Gemini uses rich-textarea with a contenteditable div inside, or a plain contenteditable
+    return document.querySelector('rich-textarea .ql-editor[contenteditable="true"]') ||
            document.querySelector('rich-textarea div[contenteditable="true"]') ||
+           document.querySelector('.ql-editor[contenteditable="true"]') ||
+           document.querySelector('div[contenteditable="true"][aria-label*="prompt"]') ||
+           document.querySelector('div[contenteditable="true"][aria-label]') ||
+           document.querySelector('.text-input-field textarea') ||
            document.querySelector('div[contenteditable="true"]');
   }
 
@@ -25,25 +27,49 @@
       el.value = text;
       el.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
+      el.focus();
       el.innerHTML = "";
       const p = document.createElement("p");
       p.textContent = text;
       el.appendChild(p);
-      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
     }
   }
 
+  function findComposerContainer(inputEl) {
+    // Walk up to find the main composer/form container
+    let el = inputEl;
+    for (let i = 0; i < 10; i++) {
+      if (!el.parentElement) break;
+      el = el.parentElement;
+      // Look for the bottom bar / input area container
+      if (el.tagName === "FORM" || el.classList.contains("input-area-container") ||
+          el.tagName === "RICH-TEXTAREA" || el.querySelector('rich-textarea')) {
+        // Go one more level up to be outside the input wrapper
+        if (el.parentElement) return el.parentElement;
+        return el;
+      }
+    }
+    // Fallback: just use closest reasonable parent
+    return inputEl.closest('form') || inputEl.parentElement?.parentElement || inputEl.parentElement;
+  }
+
   function createButtons(inputEl) {
-    if (document.querySelector('.pe-btn-row')) return;
+    if (btnRowRef && document.body.contains(btnRowRef)) return;
 
     const row = document.createElement("div");
     row.className = "pe-btn-row";
+    row.id = "pe-gemini-btn-row";
+    // Ensure high z-index and visibility
+    row.style.cssText = "position:relative; z-index:9999; padding:4px 8px;";
 
     const quickBtn = document.createElement("button");
     quickBtn.className = "pe-btn pe-btn--quick";
     quickBtn.innerHTML = `${ICON_WAND} Enhance`;
     quickBtn.title = "Quick enhance prompt";
-    quickBtn.addEventListener("click", async () => {
+    quickBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const prompt = getPromptText(inputEl);
       if (!prompt.trim()) return;
       quickBtn.classList.add("pe-btn--loading");
@@ -51,8 +77,8 @@
       try {
         const enhanced = await quickEnhance(prompt, "Gemini");
         setPromptText(inputEl, enhanced);
-      } catch (e) {
-        console.error("PE: quick enhance failed", e);
+      } catch (err) {
+        console.error("PE: quick enhance failed", err);
       }
       quickBtn.classList.remove("pe-btn--loading");
       quickBtn.innerHTML = `${ICON_WAND} Enhance`;
@@ -62,7 +88,9 @@
     assistedBtn.className = "pe-btn pe-btn--assisted";
     assistedBtn.textContent = "🔍 Assisted";
     assistedBtn.title = "Open Assisted mode in sidebar";
-    assistedBtn.addEventListener("click", () => {
+    assistedBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const prompt = getPromptText(inputEl);
       chrome.runtime.sendMessage({ type: "OPEN_SIDEBAR", prompt, mode: "assisted" });
     });
@@ -71,7 +99,9 @@
     wizardBtn.className = "pe-btn pe-btn--wizard";
     wizardBtn.textContent = "📖 Wizard";
     wizardBtn.title = "Open Wizard mode in sidebar";
-    wizardBtn.addEventListener("click", () => {
+    wizardBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const prompt = getPromptText(inputEl);
       chrome.runtime.sendMessage({ type: "OPEN_SIDEBAR", prompt, mode: "wizard" });
     });
@@ -80,10 +110,12 @@
     row.appendChild(assistedBtn);
     row.appendChild(wizardBtn);
 
-    const container = inputEl.closest("form") || inputEl.parentElement;
+    const container = findComposerContainer(inputEl);
     if (container) {
-      container.parentElement.insertBefore(row, container.nextSibling);
+      container.appendChild(row);
     }
+    
+    btnRowRef = row;
   }
 
   async function quickEnhance(prompt, targetModel) {
@@ -143,13 +175,18 @@
 
   function tryInject() {
     const el = getInputEl();
-    if (el && !injected) {
-      injected = true;
+    if (!el) return;
+    if (!btnRowRef || !document.body.contains(btnRowRef)) {
+      btnRowRef = null;
       createButtons(el);
     }
   }
 
-  const observer = new MutationObserver(tryInject);
+  const observer = new MutationObserver(() => {
+    clearTimeout(observer._timer);
+    observer._timer = setTimeout(tryInject, 500);
+  });
   observer.observe(document.body, { childList: true, subtree: true });
+  setInterval(tryInject, 2000);
   tryInject();
 })();

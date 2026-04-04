@@ -5,11 +5,12 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "OPEN_SIDEBAR") {
     chrome.sidePanel.open({ tabId: sender.tab.id });
-    // Store the prompt + mode for the sidebar to pick up
+    // Store the prompt + mode + autoEnhance flag for the sidebar to pick up
     chrome.storage.local.set({
       pendingPrompt: msg.prompt,
       pendingMode: msg.mode,
       pendingTabId: sender.tab.id,
+      pendingAutoEnhance: !!msg.autoEnhance,
     });
     sendResponse({ ok: true });
   }

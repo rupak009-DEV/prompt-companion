@@ -348,6 +348,7 @@ $("#assisted-json-copy").addEventListener("click", () => {
   navigator.clipboard.writeText($("#assisted-json-output").textContent);
   showStatus("📋 JSON Copied!");
 });
+$("#assisted-json-push").addEventListener("click", () => pushToPage($("#assisted-json-output").textContent));
 
 // ─── JSON Conversion ─────────────────────────────────────────────────────────
 function convertToJson(mode) {

@@ -4,13 +4,25 @@
   const ICON_SIDEBAR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>`;
 
   let btnRowRef = null;
+  let lastInputEl = null;
 
   function getInputEl() {
-    return document.querySelector('#prompt-textarea') ||
-           document.querySelector('div[contenteditable="true"][data-placeholder]') ||
-           document.querySelector('div[contenteditable="true"]') ||
-           document.querySelector('textarea[data-id="root"]') ||
-           document.querySelector('textarea');
+    // ChatGPT uses #prompt-textarea (a contenteditable div or textarea)
+    const selectors = [
+      '#prompt-textarea',
+      'div[id="prompt-textarea"]',
+      'div[contenteditable="true"][data-placeholder]',
+      'div[contenteditable="true"][id*="prompt"]',
+      'textarea[data-id="root"]',
+      'div[contenteditable="true"][role="textbox"]',
+      'div[contenteditable="true"]',
+      'textarea',
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el && el.offsetParent !== null) return el;
+    }
+    return null;
   }
 
   function getPromptText(el) {
@@ -46,12 +58,26 @@
     const row = document.createElement("div");
     row.className = "pe-btn-row";
     row.id = "pe-chatgpt-btn-row";
+    row.style.cssText = `
+      position: relative !important;
+      z-index: 2147483647 !important;
+      display: flex !important;
+      padding: 6px 8px !important;
+      margin: 4px 0 !important;
+      gap: 6px !important;
+      align-items: center !important;
+      flex-wrap: wrap !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    `;
 
     // Push to Sidebar button
     const sidebarBtn = document.createElement("button");
     sidebarBtn.className = "pe-btn pe-btn--quick";
     sidebarBtn.innerHTML = `${ICON_SIDEBAR} Sidebar`;
     sidebarBtn.title = "Push prompt to sidebar (Quick mode)";
+    sidebarBtn.type = "button";
     sidebarBtn.style.cssText = "background: linear-gradient(135deg, #059669, #0d9488) !important; color: #fff !important;";
     sidebarBtn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -64,6 +90,7 @@
     quickBtn.className = "pe-btn pe-btn--quick";
     quickBtn.innerHTML = `${ICON_WAND} Enhance`;
     quickBtn.title = "Quick enhance prompt";
+    quickBtn.type = "button";
     quickBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -84,6 +111,7 @@
     assistedBtn.className = "pe-btn pe-btn--assisted";
     assistedBtn.textContent = "🔍 Assisted";
     assistedBtn.title = "Open Assisted mode in sidebar (auto-enhances)";
+    assistedBtn.type = "button";
     assistedBtn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -95,6 +123,7 @@
     wizardBtn.className = "pe-btn pe-btn--wizard";
     wizardBtn.textContent = "📖 Wizard";
     wizardBtn.title = "Open Wizard mode in sidebar (auto-enhances)";
+    wizardBtn.type = "button";
     wizardBtn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -107,17 +136,28 @@
     row.appendChild(assistedBtn);
     row.appendChild(wizardBtn);
 
+    // Find the best insertion point - after the form or input container
     const form = inputEl.closest("form");
     if (form) {
       form.parentElement.insertBefore(row, form.nextSibling);
     } else {
-      const parent = inputEl.parentElement;
-      if (parent && parent.parentElement) {
-        parent.parentElement.insertBefore(row, parent.nextSibling);
+      // Walk up to find a reasonable container
+      let parent = inputEl.parentElement;
+      for (let i = 0; i < 5; i++) {
+        if (!parent || !parent.parentElement) break;
+        if (parent.clientHeight > inputEl.clientHeight * 1.5) {
+          parent.parentElement.insertBefore(row, parent.nextSibling);
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (!row.parentElement) {
+        (inputEl.parentElement?.parentElement || inputEl.parentElement)?.appendChild(row);
       }
     }
 
     btnRowRef = row;
+    lastInputEl = inputEl;
   }
 
   async function quickEnhance(prompt, targetModel) {
@@ -168,7 +208,7 @@
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "REPLACE_PROMPT") {
-      const el = getInputEl();
+      const el = lastInputEl || getInputEl();
       if (el) setPromptText(el, msg.enhancedPrompt);
     }
   });
@@ -182,11 +222,15 @@
     }
   }
 
+  // MutationObserver with requestAnimationFrame
   const observer = new MutationObserver(() => {
-    clearTimeout(observer._timer);
-    observer._timer = setTimeout(tryInject, 500);
+    if (observer._raf) cancelAnimationFrame(observer._raf);
+    observer._raf = requestAnimationFrame(tryInject);
   });
   observer.observe(document.body, { childList: true, subtree: true });
   setInterval(tryInject, 2000);
   tryInject();
+  setTimeout(tryInject, 1000);
+  setTimeout(tryInject, 3000);
+  setTimeout(tryInject, 5000);
 })();

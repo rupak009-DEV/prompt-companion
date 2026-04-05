@@ -6,9 +6,11 @@ body {
   width: 100%;
   min-height: 100vh;
   font-size: 13px;
+  display: flex;
+  flex-direction: column;
 }
 .hidden { display: none !important; }
-.view { padding: 16px; }
+.view { padding: 16px; flex: 1; overflow-y: auto; }
 
 /* Login */
 .logo-section { text-align: center; margin-bottom: 20px; padding-top: 32px; }
@@ -40,15 +42,6 @@ body {
 .header-left { display: flex; align-items: center; gap: 8px; }
 .header-icon { width: 24px; height: 24px; border-radius: 6px; }
 .header-title { font-weight: 700; font-size: 14px; }
-.btn-icon {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-}
-.btn-icon:hover { color: #e4e4eb; }
 
 /* Tabs */
 .tabs { display: flex; gap: 2px; margin-bottom: 14px; background: #1a1a24; border-radius: 10px; padding: 3px; }
@@ -68,7 +61,7 @@ body {
 .tab:hover:not(.active) { color: #e4e4eb; }
 
 /* Panels */
-.panel { display: flex; flex-direction: column; gap: 10px; }
+.panel { display: flex; flex-direction: column; gap: 10px; padding-bottom: 80px; }
 label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
 textarea, .panel input[type="text"] {
   background: #1a1a24;
@@ -138,7 +131,7 @@ textarea:focus, .panel input[type="text"]:focus { border-color: #7c3aed; }
 /* Status bar */
 .status-bar {
   position: fixed;
-  bottom: 0;
+  bottom: 56px;
   left: 0;
   right: 0;
   padding: 8px 16px;
@@ -147,7 +140,10 @@ textarea:focus, .panel input[type="text"]:focus { border-color: #7c3aed; }
   font-size: 11px;
   color: #888;
   text-align: center;
+  z-index: 100;
 }
+
+/* JSON */
 .json-section { margin-top: 8px; }
 .json-box {
   background: #12121a;
@@ -162,4 +158,46 @@ textarea:focus, .panel input[type="text"]:focus { border-color: #7c3aed; }
   max-height: 250px;
   overflow-y: auto;
   margin-bottom: 6px;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: #12121a;
+  border-top: 1px solid #2a2a3a;
+  padding: 6px 4px;
+  z-index: 200;
+}
+.footer-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  font-size: 10px;
+  font-weight: 500;
+}
+.footer-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.footer-btn:hover {
+  color: #e4e4eb;
+  background: #1e1e2e;
+}
+.footer-btn--danger:hover {
+  color: #f43f5e;
+  background: rgba(244, 63, 94, 0.1);
 }

@@ -4,29 +4,39 @@
   const ICON_SIDEBAR = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>`;
 
   let btnRowRef = null;
+  let lastInputEl = null;
 
   function getInputEl() {
-    // Try multiple selectors for Gemini's evolving DOM
+    // Gemini uses various contenteditable and textarea elements
     const selectors = [
+      // Rich text editor variants
       '.ql-editor[contenteditable="true"]',
       'rich-textarea .ql-editor[contenteditable="true"]',
       'rich-textarea div[contenteditable="true"]',
       'div.ql-editor[contenteditable="true"]',
+      // Aria-label based selectors
       'div[contenteditable="true"][aria-label*="Enter a prompt"]',
       'div[contenteditable="true"][aria-label*="prompt"]',
       'div[contenteditable="true"][aria-label*="Ask"]',
-      '.text-input-field textarea',
+      'div[contenteditable="true"][aria-label*="enter"]',
+      // Data attribute selectors
       'div[contenteditable="true"][data-placeholder]',
+      // Role-based
       'div[contenteditable="true"][role="textbox"]',
+      // Textarea fallback
+      '.text-input-field textarea',
+      'textarea[aria-label*="prompt"]',
+      'textarea[aria-label*="Ask"]',
+      'textarea[placeholder]',
     ];
     for (const sel of selectors) {
       const el = document.querySelector(sel);
       if (el && el.offsetParent !== null) return el;
     }
-    // Last resort: any visible contenteditable
+    // Last resort: any visible contenteditable with reasonable size
     const all = document.querySelectorAll('div[contenteditable="true"]');
     for (const el of all) {
-      if (el.offsetParent !== null && el.clientHeight > 20) return el;
+      if (el.offsetParent !== null && el.clientHeight > 15 && el.clientWidth > 100) return el;
     }
     return null;
   }
@@ -53,37 +63,62 @@
   }
 
   function findInsertionPoint(inputEl) {
-    // Walk up to find a suitable parent to append after
+    // Walk up to find a suitable container
     let el = inputEl;
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 15; i++) {
       if (!el.parentElement) break;
       el = el.parentElement;
       const tag = el.tagName.toLowerCase();
-      if (tag === "form" || tag === "rich-textarea" || 
-          el.classList.contains("input-area") ||
+      // Look for form-like containers
+      if (tag === "form") return el;
+      if (tag === "rich-textarea") return el;
+      // Look for containers with specific class patterns
+      if (el.classList.contains("input-area") ||
           el.classList.contains("input-area-container") ||
-          el.querySelector("rich-textarea")) {
-        return el;
-      }
+          el.classList.contains("text-input-field") ||
+          el.classList.contains("input-wrapper")) return el;
+      // Check if this element contains the rich-textarea
+      if (el.querySelector("rich-textarea")) return el;
+      // Look for footer-like containers near the input
+      if (el.querySelector('[aria-label*="Send"]') || el.querySelector('button[aria-label*="Send"]')) return el;
     }
-    // Fallback: use the input's grandparent
-    return inputEl.closest("form") || inputEl.parentElement?.parentElement || inputEl.parentElement;
+    // Fallback: use the input's closest form or nearest ancestor
+    return inputEl.closest("form") || inputEl.parentElement?.parentElement?.parentElement || inputEl.parentElement;
   }
 
   function createButtons(inputEl) {
-    if (btnRowRef && document.body.contains(btnRowRef)) return;
+    // Remove stale reference
+    if (btnRowRef && !document.body.contains(btnRowRef)) {
+      btnRowRef = null;
+    }
+    if (btnRowRef) return;
 
     const row = document.createElement("div");
     row.className = "pe-btn-row";
     row.id = "pe-gemini-btn-row";
-    row.style.cssText = "position:relative !important; z-index:99999 !important; display:flex !important; padding:6px 8px !important; margin:4px 0 !important;";
+    // Force visibility with aggressive inline styles
+    row.style.cssText = `
+      position: relative !important;
+      z-index: 2147483647 !important;
+      display: flex !important;
+      padding: 6px 8px !important;
+      margin: 4px 0 !important;
+      gap: 6px !important;
+      align-items: center !important;
+      flex-wrap: wrap !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      height: auto !important;
+      overflow: visible !important;
+      max-height: none !important;
+      transform: none !important;
+      clip: auto !important;
+    `;
 
     // Push to Sidebar button
-    const sidebarBtn = document.createElement("button");
-    sidebarBtn.className = "pe-btn pe-btn--quick";
-    sidebarBtn.innerHTML = `${ICON_SIDEBAR} Sidebar`;
-    sidebarBtn.title = "Push prompt to sidebar (Quick mode)";
-    sidebarBtn.style.cssText = "background: linear-gradient(135deg, #059669, #0d9488) !important; color: #fff !important;";
+    const sidebarBtn = mkBtn(ICON_SIDEBAR + " Sidebar", "pe-btn pe-btn--quick", "Push prompt to sidebar");
+    sidebarBtn.style.cssText += "background: linear-gradient(135deg, #059669, #0d9488) !important; color: #fff !important;";
     sidebarBtn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -91,10 +126,7 @@
       chrome.runtime.sendMessage({ type: "OPEN_SIDEBAR", prompt, mode: "quick" });
     });
 
-    const quickBtn = document.createElement("button");
-    quickBtn.className = "pe-btn pe-btn--quick";
-    quickBtn.innerHTML = `${ICON_WAND} Enhance`;
-    quickBtn.title = "Quick enhance prompt";
+    const quickBtn = mkBtn(ICON_WAND + " Enhance", "pe-btn pe-btn--quick", "Quick enhance prompt");
     quickBtn.addEventListener("click", async (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -108,13 +140,10 @@
         console.error("PE: quick enhance failed", err);
       }
       quickBtn.classList.remove("pe-btn--loading");
-      quickBtn.innerHTML = `${ICON_WAND} Enhance`;
+      quickBtn.innerHTML = ICON_WAND + " Enhance";
     });
 
-    const assistedBtn = document.createElement("button");
-    assistedBtn.className = "pe-btn pe-btn--assisted";
-    assistedBtn.textContent = "🔍 Assisted";
-    assistedBtn.title = "Open Assisted mode in sidebar (auto-enhances)";
+    const assistedBtn = mkBtn("🔍 Assisted", "pe-btn pe-btn--assisted", "Open Assisted mode in sidebar");
     assistedBtn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -122,10 +151,7 @@
       chrome.runtime.sendMessage({ type: "OPEN_SIDEBAR", prompt, mode: "assisted", autoEnhance: true });
     });
 
-    const wizardBtn = document.createElement("button");
-    wizardBtn.className = "pe-btn pe-btn--wizard";
-    wizardBtn.textContent = "📖 Wizard";
-    wizardBtn.title = "Open Wizard mode in sidebar (auto-enhances)";
+    const wizardBtn = mkBtn("📖 Wizard", "pe-btn pe-btn--wizard", "Open Wizard mode in sidebar");
     wizardBtn.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
       const prompt = getPromptText(inputEl);
@@ -138,14 +164,50 @@
     row.appendChild(assistedBtn);
     row.appendChild(wizardBtn);
 
+    // Insert the row after the input container
     const container = findInsertionPoint(inputEl);
     if (container && container.parentElement) {
       container.parentElement.insertBefore(row, container.nextSibling);
     } else if (container) {
       container.appendChild(row);
+    } else {
+      // Last resort: append after input's parent
+      inputEl.parentElement?.appendChild(row);
     }
 
     btnRowRef = row;
+    lastInputEl = inputEl;
+  }
+
+  function mkBtn(html, className, title) {
+    const btn = document.createElement("button");
+    btn.className = className;
+    btn.innerHTML = html;
+    btn.title = title;
+    btn.type = "button";
+    // Inline styles to prevent Gemini CSS from hiding buttons
+    btn.style.cssText = `
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      padding: 5px 12px !important;
+      border-radius: 8px !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      border: none !important;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      line-height: 1.4 !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+      height: auto !important;
+      width: auto !important;
+      position: static !important;
+      overflow: visible !important;
+      color: #fff !important;
+    `;
+    return btn;
   }
 
   async function quickEnhance(prompt, targetModel) {
@@ -196,7 +258,7 @@
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "REPLACE_PROMPT") {
-      const el = getInputEl();
+      const el = lastInputEl || getInputEl();
       if (el) setPromptText(el, msg.enhancedPrompt);
     }
   });
@@ -204,19 +266,26 @@
   function tryInject() {
     const el = getInputEl();
     if (!el) return;
+    // Re-inject if our buttons were removed
     if (!btnRowRef || !document.body.contains(btnRowRef)) {
       btnRowRef = null;
       createButtons(el);
     }
   }
 
+  // Use MutationObserver with requestAnimationFrame for stability
   const observer = new MutationObserver(() => {
-    clearTimeout(observer._timer);
-    observer._timer = setTimeout(tryInject, 500);
+    if (observer._raf) cancelAnimationFrame(observer._raf);
+    observer._raf = requestAnimationFrame(tryInject);
   });
   observer.observe(document.body, { childList: true, subtree: true });
-  setInterval(tryInject, 1500);
-  setTimeout(tryInject, 1000);
-  setTimeout(tryInject, 3000);
+
+  // Backup polling in case observer misses changes
+  setInterval(tryInject, 2000);
+
+  // Initial attempts with delays for SPA navigation
   tryInject();
+  setTimeout(tryInject, 1000);
+  setTimeout(tryInject, 2500);
+  setTimeout(tryInject, 5000);
 })();
